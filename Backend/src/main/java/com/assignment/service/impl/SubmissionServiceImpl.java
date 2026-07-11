@@ -156,7 +156,15 @@ public class SubmissionServiceImpl implements SubmissionService {
         Assignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Assignment not found"));
 
-        if (student.getBatch() == null || !student.getBatch().getId().equals(assignment.getBatch().getId())) {
+        if (assignment.getBatch() == null) {
+            throw new BadRequestException("This assignment is not assigned to a batch");
+        }
+
+        if (student.getBatch() == null) {
+            throw new BadRequestException("You are not assigned to a batch");
+        }
+
+        if (!student.getBatch().getId().equals(assignment.getBatch().getId())) {
             throw new BadRequestException("This assignment is not assigned to your batch");
         }
 
