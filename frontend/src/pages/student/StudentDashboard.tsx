@@ -13,7 +13,7 @@ import { getDueDateCountdown, getDueDateColor } from '../../utils/helpers';
 
 export const StudentDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { courses } = useCatalog();
+  const { courses } = useCatalog() as any;
   const [stats, setStats] = useState<StudentDashboardStats | null>(null);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -225,16 +225,6 @@ export const StudentDashboard: React.FC = () => {
                   <p className="text-xs text-[var(--text-secondary)]">Check pending due dates and submit work</p>
                 </div>
                 <ArrowRight size={14} className="text-[var(--text-secondary)] group-hover:text-[#2563EB] transition-colors" />
-              </a>
-              <a href="/student/progress" className="flex items-center gap-3 p-3 rounded-xl border border-[var(--brand-border)] hover:border-[#4A1F4F] hover:bg-[#4A1F4F08] transition-all group">
-                <div className="w-8 h-8 rounded-lg bg-[#4A1F4F] flex items-center justify-center shrink-0">
-                  <TrendingUp size={15} className="text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--text-primary)] group-hover:text-[#4A1F4F]">Learning Progress</p>
-                  <p className="text-xs text-[var(--text-secondary)]">Review performance metrics and grades</p>
-                </div>
-                <ArrowRight size={14} className="text-[var(--text-secondary)] group-hover:text-[#4A1F4F] transition-colors" />
               </a>
             </div>
           </Card>

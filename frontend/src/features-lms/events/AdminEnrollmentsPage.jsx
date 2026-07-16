@@ -23,7 +23,7 @@ export default function AdminEnrollmentsPage() {
 
   const getEventDate = (eventId) => {
     const ev = events.find((e) => String(e.id) === String(eventId));
-    return ev ? ev.date : 'N/A';
+    return ev && ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'N/A';
   };
 
   const handleAction = async (id, type, value, label) => {
@@ -43,6 +43,11 @@ export default function AdminEnrollmentsPage() {
   const processedRegs = useMemo(() => {
     let result = registrations.map((reg) => ({
       ...reg,
+      eventName: reg.eventTitle || reg.eventName || 'Event',
+      studentId: reg.studentId || reg.batchName || 'STU-N/A',
+      enrollmentStatus: reg.status || reg.enrollmentStatus || 'REGISTERED',
+      enrollmentDateTime: reg.registrationDate || reg.enrollmentDateTime || new Date().toISOString(),
+      attendanceStatus: reg.attendanceStatus || 'Pending',
       eventDate: getEventDate(reg.eventId),
     }));
 
@@ -263,6 +268,10 @@ export default function AdminEnrollmentsPage() {
                       Approved: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
                       Rejected: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
                       Cancelled: 'bg-slate-105 text-slate-550 dark:bg-slate-800/60 dark:text-slate-400',
+                      REGISTERED: 'bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300',
+                      APPROVED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300',
+                      REJECTED: 'bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-300',
+                      CANCELLED: 'bg-slate-105 text-slate-550 dark:bg-slate-800/60 dark:text-slate-400',
                     };
 
                     const attendanceColors = {

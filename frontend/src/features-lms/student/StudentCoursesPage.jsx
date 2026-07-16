@@ -1,17 +1,54 @@
-'use client';
-
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Search, Filter, LayoutGrid, List, ArrowRight, BookOpen, Clock, Award, PlayCircle, Layers } from 'lucide-react';
 import Button from '@/components/ui-lms/Button';
 import { useCatalog } from '@/hooks-lms/useCatalog';
 import { Link } from 'react-router-dom';
+import { studentService } from '../../services/student.service';
+import { toast } from 'react-hot-toast';
 
 export default function StudentCoursesPage() {
   const { courses, categories } = useCatalog();
   const [search, setSearch] = useState('');
   const [view, setView] = useState('grid');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [enrollments, setEnrollments] = useState([]);
+  const [loadingEnrollments, setLoadingEnrollments] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchEnrollments = async () => {
+      try {
+        const res = await studentService.getMyCourseEnrollments(0, 1000);
+        if (active) {
+          const content = res?.data?.content || res?.content || [];
+          setEnrollments(content);
+        }
+      } catch (err) {
+        console.error('Error fetching student course enrollments:', err);
+      } finally {
+        if (active) {
+          setLoadingEnrollments(false);
+        }
+      }
+    };
+    fetchEnrollments();
+    return () => { active = false; };
+  }, []);
+
+  const handleEnrollClick = async (courseId) => {
+    try {
+      await studentService.requestCourseEnrollment(courseId);
+      toast.success('Enrollment request submitted successfully under PENDING status.');
+      // Refresh
+      const res = await studentService.getMyCourseEnrollments(0, 1000);
+      const content = res?.data?.content || res?.content || [];
+      setEnrollments(content);
+    } catch (err) {
+      console.error('Error requesting course enrollment:', err);
+      toast.error(err.response?.data?.message || 'Failed to request enrollment.');
+    }
+  };
 
   // Filter only active/published courses created by Admin, sorted by newest first
   const publishedCourses = useMemo(() => {
@@ -96,6 +133,8 @@ export default function StudentCoursesPage() {
             const categoryName = categoryObj?.name || 'General';
             const totalModules = course.modules?.length || 0;
             const totalLessons = course.modules?.reduce((acc, m) => acc + (m.submodules?.length || 0), 0) || 0;
+            const enrollment = enrollments.find(e => String(e.courseId) === String(course.id) || e.courseName === course.title);
+            const status = enrollment ? enrollment.status : null;
             return (
               <motion.article
                 key={course.id}
@@ -144,13 +183,39 @@ export default function StudentCoursesPage() {
                 </div>
 
                 <div className="p-6 pt-0">
-                  <Link
-                    to={`/student/courses/${course.id}`}
-                    className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-white shadow-md transition-all hover:opacity-90 cursor-pointer"
-                    style={{ backgroundColor: '#7C3AED' }}
-                  >
-                    <PlayCircle className="h-4 w-4" /> Start Learning Path <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
+                  {status === 'APPROVED' ? (
+                    <Link
+                      to={`/student/courses/${course.id}`}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-white shadow-md transition-all hover:opacity-90 cursor-pointer bg-emerald-650"
+                    >
+                      Approved
+                    </Link>
+                  ) : status === 'PENDING' ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-orange-700 bg-orange-50 border border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-500/30 cursor-not-allowed opacity-75"
+                    >
+                      Pending Approval
+                    </button>
+                  ) : status === 'REJECTED' ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 dark:bg-rose-950/20 dark:text-rose-455 dark:border-rose-500/30 cursor-not-allowed opacity-75"
+                    >
+                      Rejected
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleEnrollClick(course.id)}
+                      className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-bold text-white shadow-md transition-all hover:opacity-90 cursor-pointer"
+                      style={{ backgroundColor: '#4A1F4F' }}
+                    >
+                      Request Enrollment
+                    </button>
+                  )}
                 </div>
               </motion.article>
             );

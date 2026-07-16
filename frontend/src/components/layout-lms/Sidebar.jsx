@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/categories', label: 'Categories', icon: Tag },
   { href: '/admin/courses', label: 'Courses', icon: BookOpen },
+  { href: '/admin/enrollments', label: 'Course Enrollments', icon: Layers },
   { href: '/admin/events', label: 'Events', icon: Calendar },
 ];
 

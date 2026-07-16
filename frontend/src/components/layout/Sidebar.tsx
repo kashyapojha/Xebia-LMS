@@ -48,14 +48,11 @@ const teacherNav: NavItem[] = [
 
 const studentNav: NavItem[] = [
   { to: '/student/dashboard', icon: <LayoutDashboard size={18} />, label: 'Dashboard' },
-  { to: '/student/courses', icon: <BookOpen size={18} />, label: 'Browse Courses' },
-  { to: '/student/learning-content', icon: <PlayCircle size={18} />, label: 'Learning Content' },
+  { to: '/student/courses', icon: <BookOpen size={18} />, label: 'All Courses' },
+  { to: '/student/my-courses', icon: <GraduationCap size={18} />, label: 'My Courses' },
   { to: '/student/assignments', icon: <FileText size={18} />, label: 'Assignments' },
   { to: '/student/quizzes', icon: <HelpCircle size={18} />, label: 'Quiz' },
-  { to: '/student/progress', icon: <TrendingUp size={18} />, label: 'Learning Progress' },
   { to: '/student/certificates', icon: <Award size={18} />, label: 'Certificates' },
-  { to: '/student/discussion', icon: <MessageSquare size={18} />, label: 'Discussion Forum' },
-  { to: '/student/leaderboard', icon: <Trophy size={18} />, label: 'Leaderboard' },
   { to: '/student/events', icon: <Calendar size={18} />, label: 'Events' },
 ];
 

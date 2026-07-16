@@ -30,6 +30,9 @@ import { StudentCertificates } from './pages/student/StudentCertificates';
 import { CertificatePreview } from './pages/student/CertificatePreview';
 import { TeacherCertificates } from './pages/teacher/TeacherCertificates';
 import { VerifyCertificate } from './pages/shared/VerifyCertificate';
+import { StudentMyCoursesPage } from './pages/student/StudentMyCoursesPage';
+import { AdminCourseEnrollmentsPage } from './pages/admin/AdminCourseEnrollmentsPage';
+import { NotFoundPage } from './pages/shared/NotFoundPage';
 
 // LMS Admin Portal Pages & Features
 import CategoryManagement from '@/features-lms/category/CategoryManagement';
@@ -188,8 +191,18 @@ function App() {
                 path="/student/courses"
                 element={
                   <ProtectedRoute role="student">
-                    <Layout role="student" title="Browse Courses">
+                    <Layout role="student" title="All Courses">
                       <StudentCoursesPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/my-courses"
+                element={
+                  <ProtectedRoute role="student">
+                    <Layout role="student" title="My Courses">
+                      <StudentMyCoursesPage />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -279,6 +292,7 @@ function App() {
                         <Route path="courses/:courseId/builder" element={<CourseBuilderPage />} />
                         <Route path="media" element={<MediaLibrary />} />
                         <Route path="upload-content" element={<UploadContentPage />} />
+                        <Route path="enrollments" element={<AdminCourseEnrollmentsPage />} />
                         <Route path="events" element={<EventsDashboard />} />
                         <Route path="events/create" element={<CreateEventPage />} />
                         <Route path="events/enrollments" element={<AdminEnrollmentsPage />} />
@@ -293,7 +307,7 @@ function App() {
               />
 
               {/* Catch all */}
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </BrowserRouter>
         </LmsProviders>

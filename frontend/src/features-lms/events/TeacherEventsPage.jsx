@@ -8,9 +8,10 @@ export default function TeacherEventsPage() {
   const { events } = useEvents();
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Filter only published events
+  // Filter only upcoming, ongoing, completed events
   const publishedEvents = useMemo(() => {
-    return events.filter((ev) => ev.status === 'Published');
+    const list = Array.isArray(events) ? events : [];
+    return list.filter((ev) => ev.status === 'UPCOMING' || ev.status === 'ONGOING' || ev.status === 'COMPLETED');
   }, [events]);
 
   const filteredEvents = useMemo(() => {
@@ -93,11 +94,11 @@ export default function TeacherEventsPage() {
                     <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-855 text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3.5 w-3.5 text-teal-500 shrink-0" />
-                        <span>{ev.date}</span>
+                        <span>{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="h-3.5 w-3.5 text-teal-500 shrink-0" />
-                        <span>{ev.time}</span>
+                        <span>{ev.eventDate ? new Date(ev.eventDate).toLocaleTimeString() : 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-3.5 w-3.5 text-teal-500 shrink-0" />

@@ -109,6 +109,7 @@ export const AuthPage: React.FC = () => {
         navigate('/teacher/dashboard');
       } else {
         res = await authService.studentLogin(data);
+        localStorage.setItem('xebia-student-token', res.token);
         login(res.user, res.token);
         toast.success(`Welcome back, ${res.user.name}!`);
         navigate('/student/assignments');
@@ -124,6 +125,7 @@ export const AuthPage: React.FC = () => {
         ...data,
         batchId: Number(data.batchId),
       });
+      localStorage.setItem('xebia-student-token', res.token);
       login(res.user, res.token);
       toast.success(`Account created! Welcome, ${res.user.name}!`);
       navigate('/student/assignments');
@@ -150,6 +152,7 @@ export const AuthPage: React.FC = () => {
         email: 'student@example.com',
         password: 'password123'
       });
+      localStorage.setItem('xebia-student-token', res.token);
       login(res.user, res.token);
       toast.success(`Welcome back, ${res.user.name}!`);
       navigate('/student/assignments');
@@ -166,6 +169,7 @@ export const AuthPage: React.FC = () => {
           batchId: batchId,
           password: 'password123'
         });
+        localStorage.setItem('xebia-student-token', regRes.token);
         login(regRes.user, regRes.token);
         toast.success('Demo Student account created and logged in!');
         navigate('/student/assignments');

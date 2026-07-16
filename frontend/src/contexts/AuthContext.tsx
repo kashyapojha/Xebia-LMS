@@ -84,6 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error('Logout error:', e);
     }
     localStorage.removeItem('lms_user');
+    localStorage.removeItem('xebia-student-token');
     dispatch({ type: 'LOGOUT' });
   };
 

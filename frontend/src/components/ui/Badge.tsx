@@ -1,6 +1,6 @@
 import React from 'react';
 
-type BadgeVariant = 'draft' | 'published' | 'submitted' | 'reviewed' | 'not_submitted' | 'overdue' | 'active' | 'pending';
+type BadgeVariant = 'draft' | 'published' | 'submitted' | 'reviewed' | 'not_submitted' | 'overdue' | 'active' | 'pending' | 'approved' | 'rejected';
 
 interface BadgeProps {
   variant: BadgeVariant;
@@ -41,6 +41,14 @@ const variantConfig: Record<BadgeVariant, { label: string; classes: string }> = 
     label: 'Pending',
     classes: 'bg-orange-50 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-500/30',
   },
+  approved: {
+    label: 'Approved',
+    classes: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30',
+  },
+  rejected: {
+    label: 'Rejected',
+    classes: 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/30',
+  },
 };
 
 const statusDot: Record<BadgeVariant, string> = {
@@ -52,6 +60,8 @@ const statusDot: Record<BadgeVariant, string> = {
   overdue: 'bg-red-500',
   active: 'bg-[#A855F7]',
   pending: 'bg-orange-500',
+  approved: 'bg-emerald-500',
+  rejected: 'bg-red-500',
 };
 
 export const Badge: React.FC<BadgeProps> = ({ variant, label, size = 'sm' }) => {

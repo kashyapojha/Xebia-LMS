@@ -15,7 +15,7 @@ import html2canvas from 'html2canvas';
 
 export const StudentCertificates: React.FC = () => {
   const navigate = useNavigate();
-  const { courses } = useCatalog();
+  const { courses } = useCatalog() as any;
   const [certs, setCerts] = useState<Certificate[]>([]);
   const [assignments, setAssignments] = useState<any[]>([]);
   const [previewCert, setPreviewCert] = useState<any | null>(null);
@@ -79,7 +79,7 @@ export const StudentCertificates: React.FC = () => {
   const allAssignmentsSubmitted = assignmentsList.every(a => a.submissionStatus === 'submitted' || a.submissionStatus === 'reviewed');
 
   // Final Assessment Passed
-  let finalTask = null;
+  let finalTask: any = null;
   for (const t of courseTasks) {
     if (!finalTask || t.maxMarks > finalTask.maxMarks) {
       finalTask = t;

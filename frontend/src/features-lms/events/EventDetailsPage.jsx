@@ -34,7 +34,7 @@ export default function EventDetailsPage() {
     );
   }
 
-  const isPublished = event.status === 'Published';
+  const isActive = event.status === 'UPCOMING' || event.status === 'ONGOING';
 
   return (
     <div className="flex min-h-screen flex-col bg-brand-surface text-brand-text-primary transition-colors duration-200">
@@ -82,12 +82,12 @@ export default function EventDetailsPage() {
                 <div className="absolute top-4 left-4">
                   <span
                     className={`px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase shadow-md backdrop-blur-md ${
-                      isPublished
-                        ? 'bg-emerald-100/90 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
-                        : 'bg-amber-100/90 text-amber-800 dark:bg-amber-950/80 dark:text-amber-300'
+                      isActive
+                        ? 'bg-emerald-105 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300'
+                        : 'bg-rose-105 text-rose-800 dark:bg-rose-950/80 dark:text-rose-350'
                     }`}
                   >
-                    {isPublished ? '🟢 Published' : '🟡 Draft'}
+                    {event.status}
                   </span>
                 </div>
               )}
@@ -108,7 +108,7 @@ export default function EventDetailsPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Date</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-white">{event.date}</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-white">{event.eventDate ? new Date(event.eventDate).toLocaleDateString() : 'N/A'}</p>
                     </div>
                   </div>
 
@@ -118,12 +118,12 @@ export default function EventDetailsPage() {
                     </div>
                     <div>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Time</p>
-                      <p className="text-xs font-black text-slate-800 dark:text-white">{event.time || 'TBD'}</p>
+                      <p className="text-xs font-black text-slate-800 dark:text-white">{event.eventDate ? new Date(event.eventDate).toLocaleTimeString() : 'N/A'}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-800/80">
-                    <div className="h-9 w-9 rounded-xl bg-purple-100 dark:bg-purple-950/50 flex items-center justify-center text-purple-600 shrink-0">
+                    <div className="h-9 w-9 rounded-xl bg-purple-100 dark:bg-purple-950/50 flex items-center justify-center text-purple-650 shrink-0">
                       <MapPin className="h-5 w-5" />
                     </div>
                     <div>
@@ -147,7 +147,7 @@ export default function EventDetailsPage() {
                 <Bookmark className="h-5 w-5 text-rose-500 shrink-0" />
                 <div className="text-xs font-semibold">
                   <span className="font-extrabold uppercase">Registration Deadline:</span>{' '}
-                  <span className="font-black text-rose-700 dark:text-rose-350">{event.registrationDeadline || 'N/A'}</span>. Make sure to sign up before this date.
+                  <span className="font-black text-rose-700 dark:text-rose-350">{event.registrationDeadline ? new Date(event.registrationDeadline).toLocaleDateString() : 'N/A'}</span>. Make sure to sign up before this date.
                 </div>
               </div>
             </div>

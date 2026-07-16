@@ -17,27 +17,23 @@ export default function CreateEventPage() {
     title: '',
     description: '',
     image: '',
-    date: '',
-    time: '',
+    eventDate: '',
     registrationDeadline: '',
     location: '',
-    status: 'Draft',
-    category: '',
-    organizer: '',
-    speaker: '',
-    mode: 'Virtual',
-    meetingPlatform: 'Google Meet',
-    meetingLink: '',
-    registrationType: 'Free',
-    registrationFee: '',
-    venueName: '',
-    venueAddress: '',
-    venueMapsLink: '',
-    registrationRequired: 'No',
-    maxParticipants: '',
-    startTime: '',
-    endTime: '',
+    status: 'UPCOMING',
   });
+
+  const formatDateTimeLocal = (dateString) => {
+    if (!dateString) return '';
+    try {
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return '';
+      const pad = (num) => String(num).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    } catch {
+      return '';
+    }
+  };
 
   // Load event if editing
   useEffect(() => {
@@ -48,26 +44,10 @@ export default function CreateEventPage() {
           title: existing.title || '',
           description: existing.description || '',
           image: existing.image || '',
-          date: existing.date || '',
-          time: existing.time || '',
-          registrationDeadline: existing.registrationDeadline || '',
+          eventDate: formatDateTimeLocal(existing.eventDate),
+          registrationDeadline: formatDateTimeLocal(existing.registrationDeadline),
           location: existing.location || '',
-          status: existing.status || 'Draft',
-          category: existing.category || '',
-          organizer: existing.organizer || '',
-          speaker: existing.speaker || '',
-          mode: existing.mode || 'Virtual',
-          meetingPlatform: existing.meetingPlatform || 'Google Meet',
-          meetingLink: existing.meetingLink || '',
-          registrationType: existing.registrationType || 'Free',
-          registrationFee: existing.registrationFee || '',
-          venueName: existing.venueName || '',
-          venueAddress: existing.venueAddress || '',
-          venueMapsLink: existing.venueMapsLink || '',
-          registrationRequired: existing.registrationRequired || 'No',
-          maxParticipants: existing.maxParticipants || '',
-          startTime: existing.startTime || '',
-          endTime: existing.endTime || '',
+          status: existing.status || 'UPCOMING',
         });
       } else {
         showToast('Event not found', 'error');
@@ -78,47 +58,37 @@ export default function CreateEventPage() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => {
-      const next = { ...prev, [name]: value };
-      // Auto-set location fallback for legacy backend check compatibility
-      if (name === 'mode' || name === 'venueName' || name === 'meetingPlatform') {
-        if (next.mode === 'Virtual') {
-          next.location = 'Online - ' + next.meetingPlatform;
-        } else {
-          next.location = next.venueName || prev.location || 'In-Person Venue';
-        }
-      }
-      return next;
-    });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSave = async (status) => {
-    // Fill fallback location check if still empty
-    let loc = formData.location;
-    if (!loc) {
-      if (formData.mode === 'Virtual') {
-        loc = 'Online - ' + formData.meetingPlatform;
-      } else {
-        loc = formData.venueName || 'In-Person Venue';
-      }
-    }
-
-    if (!formData.title || !formData.date || !loc) {
-      showToast('Please fill in Title and Date.', 'error');
+  const handleSave = async (statusOverride) => {
+    if (!formData.title || !formData.eventDate || !formData.location) {
+      showToast('Please fill in Title, Event Date, and Location.', 'error');
       return;
     }
 
-    const payload = { ...formData, location: loc, status };
+    const payload = {
+      title: formData.title,
+      description: formData.description,
+      image: formData.image,
+      eventDate: formData.eventDate,
+      registrationDeadline: formData.registrationDeadline || null,
+      location: formData.location,
+      status: statusOverride || formData.status || 'UPCOMING',
+    };
 
-    if (isEditMode) {
-      await updateEvent(id, payload);
-      showToast(`Event updated and saved as ${status}!`, 'success');
-    } else {
-      await createEvent(payload);
-      showToast(`Event created and saved as ${status}!`, 'success');
+    try {
+      if (isEditMode) {
+        await updateEvent(id, payload);
+        showToast('Event updated successfully!', 'success');
+      } else {
+        await createEvent(payload);
+        showToast('Event created successfully!', 'success');
+      }
+      navigate('/admin/events');
+    } catch (err) {
+      showToast('Failed to save event', 'error');
     }
-
-    navigate('/admin/events');
   };
 
   const triggerMockImageUpload = () => {
@@ -234,45 +204,9 @@ export default function CreateEventPage() {
                   <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Event Description</label>
                   <textarea
                     name="description"
-                    rows={3}
+                    rows={4}
                     placeholder="Provide a detailed description of the event agenda..."
                     value={formData.description}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Event Category</label>
-                  <input
-                    type="text"
-                    name="category"
-                    placeholder="e.g. Technology, Workshop, Webinar"
-                    value={formData.category}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Organizer</label>
-                  <input
-                    type="text"
-                    name="organizer"
-                    placeholder="e.g. Xebia HR Team"
-                    value={formData.organizer}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Speaker / Host (Optional)</label>
-                  <input
-                    type="text"
-                    name="speaker"
-                    placeholder="e.g. John Doe (Solutions Architect)"
-                    value={formData.speaker}
                     onChange={handleChange}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
                   />
@@ -280,19 +214,19 @@ export default function CreateEventPage() {
               </div>
             </div>
 
-            {/* Section 2: Schedule */}
+            {/* Section 2: Schedule & Location */}
             <div className="space-y-4 pt-2">
               <h3 className="text-sm font-bold text-[#6C1D5F] dark:text-purple-400 border-b border-slate-100 dark:border-slate-800 pb-2">
-                Event Schedule
+                Schedule & Location
               </h3>
               
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Event Date *</label>
                   <input
-                    type="date"
-                    name="date"
-                    value={formData.date}
+                    type="datetime-local"
+                    name="eventDate"
+                    value={formData.eventDate}
                     onChange={handleChange}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
                     required
@@ -300,191 +234,18 @@ export default function CreateEventPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Event Time / General duration</label>
+                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Registration Deadline</label>
                   <input
-                    type="text"
-                    name="time"
-                    placeholder="e.g. 10:00 AM or 14:00 PM"
-                    value={formData.time}
+                    type="datetime-local"
+                    name="registrationDeadline"
+                    value={formData.registrationDeadline}
                     onChange={handleChange}
                     className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Start Time</label>
-                  <input
-                    type="time"
-                    name="startTime"
-                    value={formData.startTime}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">End Time</label>
-                  <input
-                    type="time"
-                    name="endTime"
-                    value={formData.endTime}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Section 3: Event Mode */}
-            <div className="space-y-4 pt-2">
-              <h3 className="text-sm font-bold text-[#6C1D5F] dark:text-purple-400 border-b border-slate-100 dark:border-slate-800 pb-2">
-                Event Mode & Location
-              </h3>
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Event Mode</label>
-                  <div className="flex gap-4 pt-1">
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="mode"
-                        value="Virtual"
-                        checked={formData.mode === 'Virtual'}
-                        onChange={handleChange}
-                        className="text-[#6C1D5F] focus:ring-[#6C1D5F]"
-                      />
-                      Virtual (Online)
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="mode"
-                        value="Offline"
-                        checked={formData.mode === 'Offline'}
-                        onChange={handleChange}
-                        className="text-[#6C1D5F] focus:ring-[#6C1D5F]"
-                      />
-                      Offline (In-Person)
-                    </label>
-                  </div>
-                </div>
-
-                {formData.mode === 'Virtual' ? (
-                  <>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Meeting Platform</label>
-                      <select
-                        name="meetingPlatform"
-                        value={formData.meetingPlatform}
-                        onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                      >
-                        <option value="Google Meet">Google Meet</option>
-                        <option value="Zoom">Zoom</option>
-                        <option value="Teams">Teams</option>
-                        <option value="Other">Other</option>
-                      </select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Meeting Link</label>
-                      <input
-                        type="url"
-                        name="meetingLink"
-                        placeholder="https://meet.google.com/abc-defg-hij"
-                        value={formData.meetingLink}
-                        onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Registration Type</label>
-                        <div className="flex gap-4 pt-1.5">
-                          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="registrationType"
-                              value="Free"
-                              checked={formData.registrationType === 'Free'}
-                              onChange={handleChange}
-                              className="text-[#6C1D5F] focus:ring-[#6C1D5F]"
-                            />
-                            Free
-                          </label>
-                          <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                            <input
-                              type="radio"
-                              name="registrationType"
-                              value="Paid"
-                              checked={formData.registrationType === 'Paid'}
-                              onChange={handleChange}
-                              className="text-[#6C1D5F] focus:ring-[#6C1D5F]"
-                            />
-                            Paid
-                          </label>
-                        </div>
-                      </div>
-
-                      {formData.registrationType === 'Paid' && (
-                        <div className="space-y-1.5">
-                          <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Registration Fee</label>
-                          <input
-                            type="text"
-                            name="registrationFee"
-                            placeholder="e.g. $49 or ₹2999"
-                            value={formData.registrationFee}
-                            onChange={handleChange}
-                            className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Venue Name</label>
-                      <input
-                        type="text"
-                        name="venueName"
-                        placeholder="e.g. Xebia Auditorium Gurgaon"
-                        value={formData.venueName}
-                        onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Google Maps Link</label>
-                      <input
-                        type="url"
-                        name="venueMapsLink"
-                        placeholder="https://maps.google.com/..."
-                        value={formData.venueMapsLink}
-                        onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="md:col-span-2 space-y-1.5">
-                      <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Venue Address</label>
-                      <input
-                        type="text"
-                        name="venueAddress"
-                        placeholder="Full physical address..."
-                        value={formData.venueAddress}
-                        onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Event Location * (Fallback text summary)</label>
+                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Event Location *</label>
                   <input
                     type="text"
                     name="location"
@@ -495,71 +256,21 @@ export default function CreateEventPage() {
                     required
                   />
                 </div>
-              </div>
-            </div>
 
-            {/* Section 4: Registration controls */}
-            <div className="space-y-4 pt-2">
-              <h3 className="text-sm font-bold text-[#6C1D5F] dark:text-purple-400 border-b border-slate-100 dark:border-slate-800 pb-2">
-                Registration Management
-              </h3>
-              
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2 space-y-1.5">
-                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Registration Required</label>
-                  <div className="flex gap-4 pt-1">
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="registrationRequired"
-                        value="Yes"
-                        checked={formData.registrationRequired === 'Yes'}
-                        onChange={handleChange}
-                        className="text-[#6C1D5F] focus:ring-[#6C1D5F]"
-                      />
-                      Yes (Limit and track bookings)
-                    </label>
-                    <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                      <input
-                        type="radio"
-                        name="registrationRequired"
-                        value="No"
-                        checked={formData.registrationRequired === 'No'}
-                        onChange={handleChange}
-                        className="text-[#6C1D5F] focus:ring-[#6C1D5F]"
-                      />
-                      No (Open event)
-                    </label>
-                  </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Status</label>
+                  <select
+                    name="status"
+                    value={formData.status}
+                    onChange={handleChange}
+                    className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
+                  >
+                    <option value="UPCOMING">UPCOMING</option>
+                    <option value="ONGOING">ONGOING</option>
+                    <option value="COMPLETED">COMPLETED</option>
+                    <option value="CANCELLED">CANCELLED</option>
+                  </select>
                 </div>
-
-                {formData.registrationRequired === 'Yes' && (
-                  <>
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Last Date of Registration</label>
-                      <input
-                        type="date"
-                        name="registrationDeadline"
-                        value={formData.registrationDeadline}
-                        onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <label className="text-xs font-black uppercase text-slate-400 tracking-wider">Maximum Participants</label>
-                      <input
-                        type="number"
-                        name="maxParticipants"
-                        placeholder="e.g. 100"
-                        min="1"
-                        value={formData.maxParticipants}
-                        onChange={handleChange}
-                        className="w-full rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-white focus:border-purple-500 focus:outline-none"
-                      />
-                    </div>
-                  </>
-                )}
               </div>
             </div>
  
@@ -575,18 +286,10 @@ export default function CreateEventPage() {
               
               <button
                 type="button"
-                onClick={() => handleSave('Draft')}
-                className="w-full sm:w-auto px-4 py-2.5 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/20 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
-              >
-                <Save className="h-4 w-4" /> Save as Draft
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleSave('Published')}
+                onClick={() => handleSave(formData.status || 'UPCOMING')}
                 className="w-full sm:w-auto px-4 py-2.5 bg-[#6C1D5F] hover:bg-[#84117C] text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-2"
               >
-                <Globe className="h-4 w-4" /> Publish Event
+                <Save className="h-4 w-4" /> Save Event
               </button>
             </div>
 

@@ -7,22 +7,51 @@ export function EventsProvider({ children }) {
   const [events, setEvents] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch registrations helper
+  const refreshRegistrations = async () => {
+    try {
+      const isStudent = window.location.pathname.startsWith('/student');
+      const regUrl = isStudent ? '/events/registrations/my?size=1000' : '/events/registrations?size=1000';
+      const regResponse = await api.get(regUrl);
+      if (regResponse.data && regResponse.data.data && regResponse.data.data.content) {
+        const regData = Array.isArray(regResponse.data.data.content) 
+          ? regResponse.data.data.content 
+          : [];
+        setRegistrations(regData);
+      } else {
+        setRegistrations([]);
+      }
+    } catch (err) {
+      console.error('Failed to refresh registrations:', err);
+    }
+  };
 
   // Fetch events and registrations from backend on mount
   const fetchData = async () => {
     try {
       setLoading(true);
-      const evResponse = await api.get('/events');
-      if (evResponse.data && evResponse.data.data) {
-        setEvents(evResponse.data.data);
+      setError(null);
+      
+      // Fetch events
+      const evResponse = await api.get('/events?size=1000');
+      if (evResponse.data && evResponse.data.data && evResponse.data.data.content) {
+        const eventsData = Array.isArray(evResponse.data.data.content) 
+          ? evResponse.data.data.content 
+          : [];
+        setEvents(eventsData);
+      } else {
+        setEvents([]);
       }
 
-      const regResponse = await api.get('/events/registrations');
-      if (regResponse.data && regResponse.data.data) {
-        setRegistrations(regResponse.data.data);
-      }
+      // Fetch registrations
+      await refreshRegistrations();
     } catch (err) {
       console.error('Failed to fetch events data from backend:', err);
+      setError(err.message || 'Failed to load events');
+      setEvents([]);
+      setRegistrations([]);
     } finally {
       setLoading(false);
     }
@@ -37,11 +66,12 @@ export function EventsProvider({ children }) {
       const response = await api.post('/events', eventData);
       if (response.data && response.data.data) {
         const newEvent = response.data.data;
-        setEvents((prev) => [newEvent, ...prev]);
+        setEvents((prev) => [newEvent, ...(Array.isArray(prev) ? prev : [])]);
         return newEvent;
       }
     } catch (err) {
       console.error('Failed to create event:', err);
+      throw err;
     }
   };
 
@@ -50,30 +80,43 @@ export function EventsProvider({ children }) {
       const response = await api.put(`/events/${id}`, updatedData);
       if (response.data && response.data.data) {
         const saved = response.data.data;
-        setEvents((prev) =>
-          prev.map((ev) => (String(ev.id) === String(id) ? saved : ev))
-        );
+        setEvents((prev) => {
+          const eventsArray = Array.isArray(prev) ? prev : [];
+          return eventsArray.map((ev) => 
+            String(ev.id) === String(id) ? saved : ev
+          );
+        });
+        return saved;
       }
     } catch (err) {
       console.error('Failed to update event:', err);
+      throw err;
     }
   };
 
   const deleteEvent = async (id) => {
     try {
       await api.delete(`/events/${id}`);
-      setEvents((prev) => prev.filter((ev) => String(ev.id) !== String(id)));
-      setRegistrations((prev) => prev.filter((reg) => String(reg.eventId) !== String(id)));
+      setEvents((prev) => {
+        const eventsArray = Array.isArray(prev) ? prev : [];
+        return eventsArray.filter((ev) => String(ev.id) !== String(id));
+      });
+      setRegistrations((prev) => {
+        const regArray = Array.isArray(prev) ? prev : [];
+        return regArray.filter((reg) => String(reg.eventId) !== String(id));
+      });
     } catch (err) {
       console.error('Failed to delete event:', err);
+      throw err;
     }
   };
 
   const togglePublishEvent = async (id) => {
-    const target = events.find((ev) => String(ev.id) === String(id));
+    const eventsArray = Array.isArray(events) ? events : [];
+    const target = eventsArray.find((ev) => String(ev.id) === String(id));
     if (!target) return;
 
-    const nextStatus = target.status === 'Published' ? 'Draft' : 'Published';
+    const nextStatus = target.status === 'CANCELLED' ? 'UPCOMING' : 'CANCELLED';
     await updateEvent(id, { ...target, status: nextStatus });
   };
 
@@ -81,11 +124,7 @@ export function EventsProvider({ children }) {
     try {
       const response = await api.post(`/events/${eventId}/register`);
       if (response.data && response.data.data) {
-        // Refresh registrations
-        const regResponse = await api.get('/events/registrations');
-        if (regResponse.data && regResponse.data.data) {
-          setRegistrations(regResponse.data.data);
-        }
+        await refreshRegistrations();
         return true;
       }
     } catch (err) {
@@ -97,11 +136,7 @@ export function EventsProvider({ children }) {
   const cancelEnrollment = async (eventId, email) => {
     try {
       await api.delete(`/events/${eventId}/register`);
-      // Refresh registrations
-      const regResponse = await api.get('/events/registrations');
-      if (regResponse.data && regResponse.data.data) {
-        setRegistrations(regResponse.data.data);
-      }
+      await refreshRegistrations();
     } catch (err) {
       console.error('Failed to cancel enrollment:', err);
     }
@@ -115,9 +150,12 @@ export function EventsProvider({ children }) {
       });
       if (response.data && response.data.data) {
         const updated = response.data.data;
-        setRegistrations((prev) =>
-          prev.map((reg) => (String(reg.id) === String(regId) ? updated : reg))
-        );
+        setRegistrations((prev) => {
+          const regArray = Array.isArray(prev) ? prev : [];
+          return regArray.map((reg) => 
+            String(reg.id) === String(regId) ? updated : reg
+          );
+        });
       }
     } catch (err) {
       console.error('Failed to update enrollment status:', err);
@@ -126,11 +164,16 @@ export function EventsProvider({ children }) {
 
   const isRegistered = (eventId, email) => {
     if (!email) return false;
-    return registrations.some(
+    const regArray = Array.isArray(registrations) ? registrations : [];
+    return regArray.some(
       (reg) =>
         String(reg.eventId) === String(eventId) &&
         reg.studentEmail === email &&
-        (reg.enrollmentStatus === 'Enrolled' || reg.enrollmentStatus === 'Approved' || reg.enrollmentStatus === 'Registered')
+        (reg.status === 'REGISTERED' || 
+         reg.status === 'APPROVED' || 
+         reg.status === 'Enrolled' || 
+         reg.status === 'Approved' || 
+         reg.status === 'Registered')
     );
   };
 
@@ -140,6 +183,7 @@ export function EventsProvider({ children }) {
         events,
         registrations,
         loading,
+        error,
         createEvent,
         updateEvent,
         deleteEvent,

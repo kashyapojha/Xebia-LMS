@@ -1,11 +1,10 @@
-'use client';
-
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { PlayCircle, FileText, CheckCircle2, ArrowLeft, Clock, BookOpen, Layers, Download, ExternalLink, HelpCircle, CheckCircle, Film } from 'lucide-react';
 import Button from '@/components/ui-lms/Button';
 import { useCatalog } from '@/hooks-lms/useCatalog';
+import { studentService } from '../../services/student.service';
 
 const getVideoPlayer = (url) => {
   if (!url) return null;
@@ -66,6 +65,39 @@ export default function StudentCourseDetailsPage() {
     return courses.find(c => String(c.id) === String(courseId)) || courses[0];
   }, [courses, courseId]);
 
+  const [enrollments, setEnrollments] = useState([]);
+  const [loadingEnrollments, setLoadingEnrollments] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    const fetchEnrollments = async () => {
+      try {
+        const res = await studentService.getMyCourseEnrollments(0, 1000);
+        if (active) {
+          const content = res?.data?.content || res?.content || [];
+          setEnrollments(content);
+        }
+      } catch (err) {
+        console.error('Error fetching student course enrollments:', err);
+      } finally {
+        if (active) {
+          setLoadingEnrollments(false);
+        }
+      }
+    };
+    fetchEnrollments();
+    return () => { active = false; };
+  }, []);
+
+  const enrollment = useMemo(() => {
+    if (loadingEnrollments) return null;
+    return enrollments.find(e => String(e.courseId) === String(courseId) || e.courseName === course?.title);
+  }, [enrollments, loadingEnrollments, courseId, course]);
+
+  const isApproved = useMemo(() => {
+    return enrollment?.status === 'APPROVED';
+  }, [enrollment]);
+
   const [activeModuleIndex, setActiveModuleIndex] = useState(0);
   const [activeSubmoduleIndex, setActiveSubmoduleIndex] = useState(0);
 
@@ -78,6 +110,52 @@ export default function StudentCourseDetailsPage() {
       <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] p-8 text-center">
         <h2 className="text-xl font-bold text-slate-800 dark:text-white">Course Not Found</h2>
         <Link to="/student/courses" className="mt-4 inline-block text-xs font-bold text-purple-600 underline">Return to My Courses</Link>
+      </div>
+    );
+  }
+
+  if (loadingEnrollments) {
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] flex items-center justify-center p-8">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-semibold text-slate-500">Checking course enrollment status...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isApproved) {
+    let friendlyMessage = "You must request enrollment and wait for Admin approval to view course contents.";
+    if (enrollment?.status === 'PENDING') {
+      friendlyMessage = "Your enrollment request is pending approval.";
+    } else if (enrollment?.status === 'REJECTED') {
+      friendlyMessage = "Your enrollment request was rejected.";
+    }
+
+    return (
+      <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0B1120] flex items-center justify-center p-8">
+        <div className="w-full max-w-md bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl text-center space-y-6 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-rose-50 dark:bg-rose-950/30 flex items-center justify-center text-rose-600">
+            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-lg font-extrabold text-slate-900 dark:text-white">Access Denied</h2>
+            <p className="text-xs text-slate-500 dark:text-[#CBD5E1] leading-relaxed">
+              {friendlyMessage}
+            </p>
+          </div>
+          <div className="flex gap-3 w-full">
+            <Link
+              to="/student/courses"
+              className="flex-1 text-center py-2.5 rounded-xl border border-slate-200 dark:border-[#334155] text-xs font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+            >
+              Go Back
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }

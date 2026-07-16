@@ -345,4 +345,34 @@ export const studentService = {
     }
     throw new Error('User not found');
   },
+
+  // Course Enrollments
+  requestCourseEnrollment: async (courseId: string | number) => {
+    const res = await api.post(`/enrollments/request/${courseId}`);
+    return res.data;
+  },
+
+  getMyCourseEnrollments: async (page = 0, size = 1000) => {
+    const res = await api.get('/enrollments/my', { params: { page: String(page), size: String(size) } });
+    return res.data;
+  },
+
+  getCourseEnrollments: async (status?: string, page = 0, size = 1000) => {
+    const params: Record<string, string> = { page: String(page), size: String(size) };
+    if (status && status !== 'all') {
+      params.status = status;
+    }
+    const res = await api.get('/enrollments', { params });
+    return res.data;
+  },
+
+  approveCourseEnrollment: async (id: number | string, remarks?: string) => {
+    const res = await api.put(`/enrollments/${id}/approve`, remarks ? { remarks } : {});
+    return res.data;
+  },
+
+  rejectCourseEnrollment: async (id: number | string, remarks?: string) => {
+    const res = await api.put(`/enrollments/${id}/reject`, remarks ? { remarks } : {});
+    return res.data;
+  },
 };

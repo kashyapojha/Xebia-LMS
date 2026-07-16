@@ -57,29 +57,20 @@ export default function EventsDashboard() {
 
   // Compute stats
   const stats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
-    
     const total = events.length;
     
-    const upcoming = events.filter((e) => {
-      return e.status === 'Published' && e.date > today;
-    }).length;
-    
-    const ongoing = events.filter((e) => {
-      return e.status === 'Published' && e.date === today;
-    }).length;
-
-    const completed = events.filter((e) => {
-      return e.date < today;
-    }).length;
+    const upcoming = events.filter((e) => e.status === 'UPCOMING').length;
+    const ongoing = events.filter((e) => e.status === 'ONGOING').length;
+    const completed = events.filter((e) => e.status === 'COMPLETED').length;
+    const cancelled = events.filter((e) => e.status === 'CANCELLED').length;
     
     const enrollments = registrations.filter(
-      (r) => r.enrollmentStatus === 'Enrolled' || r.enrollmentStatus === 'Approved'
+      (r) => r.status === 'REGISTERED' || r.status === 'APPROVED' || r.status === 'Enrolled' || r.status === 'Approved' || r.status === 'Registered'
     ).length;
 
-    const pending = registrations.filter((r) => r.enrollmentStatus === 'Enrolled').length;
+    const pending = registrations.filter((r) => r.status === 'REGISTERED' || r.status === 'Enrolled').length;
 
-    return { total, upcoming, ongoing, completed, enrollments, pending };
+    return { total, upcoming, ongoing, completed, cancelled, enrollments, pending };
   }, [events, registrations]);
 
   // Extract metadata lists for filters
@@ -124,20 +115,23 @@ export default function EventsDashboard() {
 
   const handleTogglePublish = async (id, status, title) => {
     await togglePublishEvent(id);
-    const action = status === 'Published' ? 'unpublished' : 'published';
+    const action = status === 'CANCELLED' ? 'activated' : 'cancelled';
     showToast(`"${title}" ${action} successfully!`, 'success');
     setActiveMenuId(null);
   };
 
   const handleDuplicate = async (ev) => {
     const copy = {
-      ...ev,
       title: `Copy of ${ev.title}`,
-      status: 'Draft',
+      description: ev.description || '',
+      image: ev.image || '',
+      eventDate: ev.eventDate,
+      registrationDeadline: ev.registrationDeadline || null,
+      location: ev.location,
+      status: 'UPCOMING',
     };
-    delete copy.id;
     await createEvent(copy);
-    showToast(`"${ev.title}" duplicated as Draft!`, 'success');
+    showToast(`"${ev.title}" duplicated successfully!`, 'success');
     setActiveMenuId(null);
   };
 
@@ -152,15 +146,13 @@ export default function EventsDashboard() {
 
     // Status tab filters
     if (activeTab === 'Upcoming') {
-      result = result.filter(e => e.status === 'Published' && e.date > today);
+      result = result.filter(e => e.status === 'UPCOMING');
     } else if (activeTab === 'Ongoing') {
-      result = result.filter(e => e.status === 'Published' && e.date === today);
+      result = result.filter(e => e.status === 'ONGOING');
     } else if (activeTab === 'Completed') {
-      result = result.filter(e => e.date < today);
-    } else if (activeTab === 'Draft') {
-      result = result.filter(e => e.status === 'Draft');
+      result = result.filter(e => e.status === 'COMPLETED');
     } else if (activeTab === 'Cancelled') {
-      result = result.filter(e => e.status === 'Cancelled');
+      result = result.filter(e => e.status === 'CANCELLED');
     }
 
     // Search query
@@ -186,7 +178,7 @@ export default function EventsDashboard() {
 
     // Date filter
     if (filterDate) {
-      result = result.filter((ev) => ev.date === filterDate);
+      result = result.filter((ev) => ev.eventDate === filterDate);
     }
 
     // Sort
@@ -194,8 +186,8 @@ export default function EventsDashboard() {
       if (sortBy === 'name-asc') return a.title.localeCompare(b.title);
       if (sortBy === 'name-desc') return b.title.localeCompare(a.title);
       
-      const timeA = new Date(a.date).getTime();
-      const timeB = new Date(b.date).getTime();
+      const timeA = a.eventDate ? new Date(a.eventDate).getTime() : 0;
+      const timeB = b.eventDate ? new Date(b.eventDate).getTime() : 0;
       
       if (sortBy === 'date-asc') return timeA - timeB;
       if (sortBy === 'date-desc') return timeB - timeA;
@@ -362,7 +354,7 @@ export default function EventsDashboard() {
         {/* Filter tabs block */}
         <div className="border-b border-slate-200 dark:border-slate-800">
           <div className="flex overflow-x-auto gap-4 -mb-px">
-            {['All', 'Upcoming', 'Ongoing', 'Completed', 'Draft', 'Cancelled'].map((tab) => (
+            {['All', 'Upcoming', 'Ongoing', 'Completed', 'Cancelled'].map((tab) => (
               <button
                 key={tab}
                 onClick={() => {
@@ -481,15 +473,13 @@ export default function EventsDashboard() {
         ) : viewMode === 'grid' ? (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredEvents.map((ev) => {
-              const isPublished = ev.status === 'Published';
+              const isActive = ev.status === 'UPCOMING' || ev.status === 'ONGOING';
               const cat = getEventCategory(ev.title);
+              const enrolledCount = ev.registrationCount || 0;
               const enrolledList = getEnrolledList(ev.id);
-              const enrolledCount = enrolledList.length;
               const maxCapacity = 100;
               const remainingSeats = maxCapacity - enrolledCount;
               const filledPercent = Math.min((enrolledCount / maxCapacity) * 100, 100);
-              const isCompleted = new Date(ev.date) < new Date();
-              const statusLabel = isCompleted ? 'Completed' : ev.status;
 
               return (
                 <motion.div
@@ -513,14 +503,16 @@ export default function EventsDashboard() {
                       <div className="absolute top-4 left-4">
                         <span
                           className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase shadow-md ${
-                            isCompleted
+                            ev.status === 'COMPLETED'
                               ? 'bg-slate-900/80 text-slate-350'
-                              : isPublished
-                              ? 'bg-emerald-500/90 text-white'
-                              : 'bg-amber-500/90 text-white'
+                              : ev.status === 'ONGOING'
+                              ? 'bg-purple-500/90 text-white'
+                              : ev.status === 'CANCELLED'
+                              ? 'bg-rose-500/90 text-white'
+                              : 'bg-emerald-500/90 text-white'
                           }`}
                         >
-                          {statusLabel}
+                          {ev.status}
                         </span>
                       </div>
 
@@ -559,6 +551,12 @@ export default function EventsDashboard() {
                                 <Edit3 className="h-3.5 w-3.5" /> Edit Details
                               </button>
                               <button
+                                onClick={() => { navigate(`/admin/events/${ev.id}/registrations`); setActiveMenuId(null); }}
+                                className="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                              >
+                                <Users className="h-3.5 w-3.5" /> View Registrations
+                              </button>
+                              <button
                                 onClick={() => { navigate(`/admin/events/enrollments`); setActiveMenuId(null); }}
                                 className="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
                               >
@@ -574,8 +572,8 @@ export default function EventsDashboard() {
                                 onClick={() => handleTogglePublish(ev.id, ev.status, ev.title)}
                                 className="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2 text-purple-650"
                               >
-                                {isPublished ? <EyeOff className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-                                {isPublished ? 'Unpublish' : 'Publish'}
+                                {isActive ? <EyeOff className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+                                {isActive ? 'Cancel Event' : 'Activate Event'}
                               </button>
                               <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
                               <button
@@ -608,11 +606,11 @@ export default function EventsDashboard() {
                       <div className="space-y-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-350 border-t border-slate-100 dark:border-slate-850 pt-3">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-3.5 w-3.5 text-[#6C1D5F] dark:text-purple-400" />
-                          <span>Date: {ev.date}</span>
+                          <span>Date: {ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'N/A'}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="h-3.5 w-3.5 text-[#6C1D5F] dark:text-purple-400" />
-                          <span>Time: {ev.time || '10:00 AM'}</span>
+                          <span>Time: {ev.eventDate ? new Date(ev.eventDate).toLocaleTimeString() : 'N/A'}</span>
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="h-3.5 w-3.5 text-[#6C1D5F] dark:text-purple-400" />
@@ -623,7 +621,7 @@ export default function EventsDashboard() {
                       {/* Deadline warning */}
                       <div className="text-[10px] uppercase font-black text-slate-450 border-t border-slate-100 dark:border-slate-850 pt-2 flex justify-between">
                         <span>Deadline</span>
-                        <span className="text-rose-500 font-extrabold">{ev.registrationDeadline}</span>
+                        <span className="text-rose-500 font-extrabold">{ev.registrationDeadline ? new Date(ev.registrationDeadline).toLocaleDateString() : 'N/A'}</span>
                       </div>
 
                       {/* Progress bar and seat info */}
@@ -668,14 +666,14 @@ export default function EventsDashboard() {
                   </div>
 
                   {/* Card Footer */}
-                  <div className="px-5 py-3.5 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-850 flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase mt-auto">
-                    <div className="flex items-center gap-1.5">
-                      <div className="h-5 w-5 rounded-full bg-purple-900 text-white flex items-center justify-center text-[8px]">
-                        SC
-                      </div>
-                      <span className="text-slate-655 dark:text-slate-355">Sarah Chen</span>
-                    </div>
-                    <span>Updated 1d ago</span>
+                  <div className="px-5 py-3.5 bg-slate-50/50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-850 flex items-center justify-between text-[10px] font-bold mt-auto gap-4">
+                    <button
+                      onClick={() => navigate(`/admin/events/${ev.id}/registrations`)}
+                      className="px-3 py-1.5 bg-[#6C1D5F] hover:bg-[#521549] text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer"
+                    >
+                      View Registrations
+                    </button>
+                    <span className="text-slate-400 uppercase">Updated 1d ago</span>
                   </div>
                 </motion.div>
               );
@@ -698,11 +696,9 @@ export default function EventsDashboard() {
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-850 text-xs font-semibold text-slate-700 dark:text-slate-300">
                   {filteredEvents.map((ev) => {
-                    const isPublished = ev.status === 'Published';
+                    const isActive = ev.status === 'UPCOMING' || ev.status === 'ONGOING';
                     const cat = getEventCategory(ev.title);
                     const enrolledCount = getEnrolledList(ev.id).length;
-                    const isCompleted = new Date(ev.date) < new Date();
-                    const statusLabel = isCompleted ? 'Completed' : ev.status;
 
                     return (
                       <tr key={ev.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/10 transition-colors">
@@ -715,7 +711,7 @@ export default function EventsDashboard() {
                             />
                             <div>
                               <div className="font-bold text-slate-900 dark:text-white">{ev.title}</div>
-                              <div className="text-[10px] text-slate-400 font-bold uppercase">Deadline: {ev.registrationDeadline}</div>
+                              <div className="text-[10px] text-slate-400 font-bold uppercase">Deadline: {ev.registrationDeadline ? new Date(ev.registrationDeadline).toLocaleDateString() : 'N/A'}</div>
                             </div>
                           </div>
                         </td>
@@ -725,7 +721,7 @@ export default function EventsDashboard() {
                           </span>
                         </td>
                         <td className="py-4 px-6">
-                          <div>{ev.date} @ {ev.time || '10:00 AM'}</div>
+                          <div>{ev.eventDate ? new Date(ev.eventDate).toLocaleDateString() : 'N/A'} @ {ev.eventDate ? new Date(ev.eventDate).toLocaleTimeString() : 'N/A'}</div>
                           <div className="text-[10px] text-slate-400 font-semibold flex items-center gap-0.5">
                             <MapPin className="h-3 w-3" /> {ev.location}
                           </div>
@@ -740,29 +736,24 @@ export default function EventsDashboard() {
                         </td>
                         <td className="py-4 px-6">
                           <div className="space-y-1 w-32">
-                            <div className="text-[10px] font-black flex justify-between text-slate-500">
-                              <span>{enrolledCount} Enrolled</span>
-                              <span>{100 - enrolledCount} Left</span>
-                            </div>
-                            <div className="w-full bg-slate-150 dark:bg-slate-800 h-1 rounded-full overflow-hidden">
-                              <div
-                                className="bg-purple-600 h-full rounded-full"
-                                style={{ width: `${Math.min(enrolledCount, 100)}%` }}
-                              ></div>
+                            <div className="text-[10px] font-black flex justify-between text-slate-550">
+                              <span>Registered Students: {ev.registrationCount || 0}</span>
                             </div>
                           </div>
                         </td>
                         <td className="py-4 px-6">
                           <span
                             className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                              isCompleted
-                                ? 'bg-slate-100 text-slate-550'
-                                : isPublished
-                                ? 'bg-emerald-105 text-emerald-800'
-                                : 'bg-amber-105 text-amber-800'
+                              ev.status === 'COMPLETED'
+                                ? 'bg-slate-100 text-slate-500'
+                                : ev.status === 'ONGOING'
+                                ? 'bg-purple-100 text-purple-800'
+                                : ev.status === 'CANCELLED'
+                                ? 'bg-rose-100 text-rose-800'
+                                : 'bg-emerald-100 text-emerald-800'
                             }`}
                           >
-                            {statusLabel}
+                            {ev.status}
                           </span>
                         </td>
                         <td className="py-4 px-6 text-center">
@@ -795,6 +786,12 @@ export default function EventsDashboard() {
                                     <Edit3 className="h-3.5 w-3.5" /> Edit Details
                                   </button>
                                   <button
+                                    onClick={() => { navigate(`/admin/events/${ev.id}/registrations`); setActiveMenuId(null); }}
+                                    className="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
+                                  >
+                                    <Users className="h-3.5 w-3.5" /> Registrations
+                                  </button>
+                                  <button
                                     onClick={() => { navigate(`/admin/events/enrollments`); setActiveMenuId(null); }}
                                     className="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
                                   >
@@ -810,8 +807,8 @@ export default function EventsDashboard() {
                                     onClick={() => handleTogglePublish(ev.id, ev.status, ev.title)}
                                     className="w-full text-left px-3 py-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
                                   >
-                                    {isPublished ? <EyeOff className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
-                                    {isPublished ? 'Unpublish' : 'Publish'}
+                                    {isActive ? <EyeOff className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+                                    {isActive ? 'Cancel Event' : 'Activate Event'}
                                   </button>
                                   <div className="border-t border-slate-100 dark:border-slate-800 my-1"></div>
                                   <button
