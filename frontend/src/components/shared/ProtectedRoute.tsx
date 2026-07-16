@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  role: 'teacher' | 'student';
+  role: 'admin' | 'teacher' | 'student';
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, role }) => {
@@ -30,19 +30,21 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, role }
 
   if (user.role !== role) {
     // Redirect to correct portal
+    if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
     if (user.role === 'teacher') return <Navigate to="/teacher/dashboard" replace />;
-    if (user.role === 'student') return <Navigate to="/student/assignments" replace />;
+    if (user.role === 'student') return <Navigate to="/student/dashboard" replace />;
   }
 
   return <>{children}</>;
 };
 
-export const PublicRoute: React.FC<{ children: React.ReactNode; role?: 'teacher' | 'student' }> = ({ children }) => {
+export const PublicRoute: React.FC<{ children: React.ReactNode; role?: 'admin' | 'teacher' | 'student' }> = ({ children }) => {
   const { isAuthenticated, user } = useAuth();
 
   if (isAuthenticated && user) {
+    if (user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
     if (user.role === 'teacher') return <Navigate to="/teacher/dashboard" replace />;
-    if (user.role === 'student') return <Navigate to="/student/assignments" replace />;
+    if (user.role === 'student') return <Navigate to="/student/dashboard" replace />;
   }
 
   return <>{children}</>;

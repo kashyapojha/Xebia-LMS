@@ -37,6 +37,33 @@ export const authService = {
     };
   },
 
+  login: async (data: LoginCredentials) => {
+    const res = await api.post('/auth/login', data);
+    const authData = res.data.data;
+    const rawRole = authData.role || authData.user?.role;
+    let role: 'admin' | 'teacher' | 'student' = 'student';
+    if (rawRole) {
+      const lower = rawRole.toLowerCase();
+      if (lower === 'admin') role = 'admin';
+      else if (lower === 'teacher') role = 'teacher';
+      else if (lower === 'student') role = 'student';
+    }
+    const user: User = {
+      id: authData.email,
+      name: authData.fullName,
+      email: authData.email,
+      role: role,
+      ...(role === 'student' && {
+        enrollmentNumber: 'ENR-' + authData.email.split('@')[0].toUpperCase(),
+      }),
+    } as any;
+    return {
+      user,
+      token: authData.token,
+      authData,
+    };
+  },
+
   studentLogin: async (data: LoginCredentials) => {
     const res = await api.post('/auth/login', data);
     const authData = res.data.data;

@@ -111,8 +111,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, isMobileOpen, onClose })
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto p-3 space-y-1.5 select-none">
-          <p className="px-3 py-2 text-[9px] font-bold uppercase tracking-widest text-purple-200/50">
+        <nav className="flex-1 overflow-y-auto p-4 space-y-2 select-none">
+          <p className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-purple-300/40">
             Menu
           </p>
           {navItems.map((item) => (
@@ -121,15 +121,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, isMobileOpen, onClose })
               to={item.to}
               onClick={onClose}
               className={({ isActive }) => `
-                flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold
-                transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer
+                flex items-center gap-3.5 px-4 py-3 rounded-xl text-sm font-medium
+                transition-all duration-200 hover:scale-[1.01] active:scale-[0.99] cursor-pointer
                 ${isActive
-                  ? 'bg-[#7B2D7B] text-white shadow-[0_4px_12px_rgba(123,45,123,0.3)]'
+                  ? 'bg-[#7A2676] text-white font-semibold shadow-md shadow-purple-950/25'
                   : 'text-purple-100/80 hover:bg-white/5 hover:text-white'
                 }
               `}
             >
-              <span className="shrink-0">{item.icon}</span>
+              <span className="shrink-0 flex items-center justify-center">{item.icon}</span>
               <span>{item.label}</span>
             </NavLink>
           ))}

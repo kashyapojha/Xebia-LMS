@@ -85,6 +85,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     localStorage.removeItem('lms_user');
     localStorage.removeItem('xebia-student-token');
+    localStorage.removeItem('xebia-student-refresh-token');
+    localStorage.removeItem('xebia-student-user');
+    localStorage.removeItem('xebia-lms-token');
+    localStorage.removeItem('xebia-lms-refresh-token');
+    localStorage.removeItem('xebia-lms-user');
     dispatch({ type: 'LOGOUT' });
   };
 

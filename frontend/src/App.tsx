@@ -201,7 +201,7 @@ function App() {
                 path="/student/my-courses"
                 element={
                   <ProtectedRoute role="student">
-                    <Layout role="student" title="My Courses">
+                    <Layout role="student" title="" subtitle="">
                       <StudentMyCoursesPage />
                     </Layout>
                   </ProtectedRoute>
@@ -268,8 +268,10 @@ function App() {
                 }
               />
 
-              {/* Redirect /student to /student/dashboard */}
+              {/* Redirect portals to their dashboards */}
               <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
+              <Route path="/teacher" element={<Navigate to="/teacher/dashboard" replace />} />
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
               {/* Redirect legacy admin login */}
               <Route path="/admin/login" element={<Navigate to="/?role=admin" replace />} />

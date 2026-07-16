@@ -25,8 +25,8 @@ export default function Button({
   variant = 'primary',
   size = 'md',
   className,
-  loading,
-  disabled,
+  loading = false,
+  disabled = false,
   ...props
 }) {
   return (

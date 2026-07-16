@@ -45,30 +45,30 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, onMenuToggle })
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         {/* Notification bell (decorative) */}
-        <button className="relative p-2 rounded-xl text-[var(--text-secondary)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer">
+        <button className="relative p-2 rounded-xl text-[var(--text-secondary)] hover:bg-brand-surface dark:hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 cursor-pointer">
           <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#4A1F4F]" />
+          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-[#4A1F4F] dark:bg-purple-400 animate-pulse" />
         </button>
 
         {/* Dark mode toggle */}
         <button
           onClick={toggle}
-          className="p-2 rounded-xl text-[var(--text-secondary)] hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          className="p-2 rounded-xl text-[var(--text-secondary)] hover:bg-brand-surface dark:hover:bg-slate-800 transition-all hover:scale-105 active:scale-95 cursor-pointer"
           aria-label="Toggle dark mode"
         >
-          {isDark ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} />}
+          {isDark ? <Sun size={18} className="text-amber-400 animate-spin-slow" /> : <Moon size={18} />}
         </button>
 
         {/* Avatar */}
-        <div className="flex items-center gap-2 pl-2 border-l border-[var(--brand-border)]">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#4A1F4F] to-[#622865] flex items-center justify-center text-white text-xs font-bold shadow-sm">
+        <div className="flex items-center gap-3 pl-3 border-l border-[var(--brand-border)]">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#4A1F4F] to-[#7A2676] flex items-center justify-center text-white text-xs font-bold shadow-sm ring-2 ring-purple-950/10 dark:ring-white/10 shrink-0">
             {user ? getInitials(user.name) : '?'}
           </div>
-          <div className="hidden md:block">
-            <p className="text-xs font-medium text-[var(--text-primary)] leading-none">{user?.name}</p>
-            <p className="text-[10px] text-[var(--text-secondary)] capitalize mt-0.5">{user?.role}</p>
+          <div className="hidden md:block select-none">
+            <p className="text-xs font-semibold text-[var(--text-primary)] leading-tight">{user?.name}</p>
+            <p className="text-[9px] font-bold text-[var(--text-secondary)] uppercase tracking-wider mt-0.5">{user?.role}</p>
           </div>
         </div>
       </div>

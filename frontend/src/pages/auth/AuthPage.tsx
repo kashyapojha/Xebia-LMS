@@ -40,9 +40,23 @@ export const AuthPage: React.FC = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [searchParams] = useSearchParams();
-  const { login } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const { login: adminLogin } = useAdminAuth() as any;
   const { isDark, toggle } = useTheme();
+
+  // Redirect authenticated user automatically based on their role on load
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const userRole = user.role?.toLowerCase();
+      if (userRole === 'admin') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (userRole === 'teacher') {
+        navigate('/teacher/dashboard', { replace: true });
+      } else if (userRole === 'student') {
+        navigate('/student/dashboard', { replace: true });
+      }
+    }
+  }, [isAuthenticated, user, navigate]);
   
   const { batchList } = useAppSelector((state) => state.batch);
 
@@ -93,27 +107,39 @@ export const AuthPage: React.FC = () => {
     }
   }, [watchBatchId, batchList]);
 
+  // Reusable role-based redirect and state syncer
+  const performLoginRedirect = async (email, password) => {
+    const { user, token } = await authService.login({ email, password });
+    
+    // Save tokens and user locally
+    localStorage.setItem('xebia-student-token', token);
+    localStorage.setItem('lms_user', JSON.stringify(user));
+    
+    const userRole = user.role?.toLowerCase();
+    
+    if (userRole === 'admin') {
+      // Sync Admin authentication context
+      await adminLogin(email, password);
+      // Sync main authentication context
+      login(user, token);
+      
+      toast.success(`Welcome back, ${user.name || 'Admin'}!`);
+      navigate('/admin/dashboard', { replace: true });
+    } else if (userRole === 'teacher') {
+      login(user, token);
+      toast.success(`Welcome back, ${user.name}!`);
+      navigate('/teacher/dashboard', { replace: true });
+    } else {
+      login(user, token);
+      toast.success(`Welcome back, ${user.name}!`);
+      navigate('/student/dashboard', { replace: true });
+    }
+  };
+
   // Submit Handlers
   const handleLogin = async (data: LoginForm) => {
     try {
-      let res;
-      const email = data.email.toLowerCase();
-      if (email.includes('admin')) {
-        const adminUser = await adminLogin(data.email, data.password);
-        toast.success(`Welcome back, ${adminUser.name || 'Admin'}!`);
-        navigate('/admin/dashboard');
-      } else if (email.includes('teacher')) {
-        res = await authService.teacherLogin(data);
-        login(res.user, res.token);
-        toast.success(`Welcome back, ${res.user.name}!`);
-        navigate('/teacher/dashboard');
-      } else {
-        res = await authService.studentLogin(data);
-        localStorage.setItem('xebia-student-token', res.token);
-        login(res.user, res.token);
-        toast.success(`Welcome back, ${res.user.name}!`);
-        navigate('/student/assignments');
-      }
+      await performLoginRedirect(data.email, data.password);
     } catch (err: any) {
       toast.error(err.response?.data?.message || err.message || 'Login failed. Please check credentials.');
     }
@@ -128,7 +154,7 @@ export const AuthPage: React.FC = () => {
       localStorage.setItem('xebia-student-token', res.token);
       login(res.user, res.token);
       toast.success(`Account created! Welcome, ${res.user.name}!`);
-      navigate('/student/assignments');
+      navigate('/student/dashboard', { replace: true });
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Registration failed.');
     }
@@ -139,7 +165,7 @@ export const AuthPage: React.FC = () => {
       const res = await authService.teacherRegister(data);
       login(res.user, res.token);
       toast.success(`Account created! Welcome, ${res.user.name}!`);
-      navigate('/teacher/dashboard');
+      navigate('/teacher/dashboard', { replace: true });
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Registration failed.');
     }
@@ -148,14 +174,7 @@ export const AuthPage: React.FC = () => {
   // Direct login for quick demo
   const handleStudentDirectLogin = async () => {
     try {
-      const res = await authService.studentLogin({
-        email: 'student@example.com',
-        password: 'password123'
-      });
-      localStorage.setItem('xebia-student-token', res.token);
-      login(res.user, res.token);
-      toast.success(`Welcome back, ${res.user.name}!`);
-      navigate('/student/assignments');
+      await performLoginRedirect('student@example.com', 'password123');
     } catch (err: any) {
       try {
         let batchId = 1;
@@ -172,7 +191,7 @@ export const AuthPage: React.FC = () => {
         localStorage.setItem('xebia-student-token', regRes.token);
         login(regRes.user, regRes.token);
         toast.success('Demo Student account created and logged in!');
-        navigate('/student/assignments');
+        navigate('/student/dashboard', { replace: true });
       } catch {
         toast.error('Quick Student login failed.');
       }
@@ -181,13 +200,7 @@ export const AuthPage: React.FC = () => {
 
   const handleTeacherDirectLogin = async () => {
     try {
-      const res = await authService.teacherLogin({
-        email: 'teacher@example.com',
-        password: 'password123'
-      });
-      login(res.user, res.token);
-      toast.success(`Welcome back, ${res.user.name}!`);
-      navigate('/teacher/dashboard');
+      await performLoginRedirect('teacher@example.com', 'password123');
     } catch (err: any) {
       try {
         const regRes = await authService.teacherRegister({
@@ -198,7 +211,7 @@ export const AuthPage: React.FC = () => {
         });
         login(regRes.user, regRes.token);
         toast.success('Demo Teacher account created and logged in!');
-        navigate('/teacher/dashboard');
+        navigate('/teacher/dashboard', { replace: true });
       } catch {
         toast.error('Quick Teacher login failed.');
       }
@@ -207,9 +220,7 @@ export const AuthPage: React.FC = () => {
 
   const handleAdminDirectLogin = async () => {
     try {
-      const adminUser = await adminLogin('admin@xebia.com', 'admin123');
-      toast.success(`Welcome back, ${adminUser.name || 'Admin'}!`);
-      navigate('/admin/dashboard');
+      await performLoginRedirect('admin@xebia.com', 'admin123');
     } catch (err: any) {
       toast.error('Quick Admin login failed. Please verify admin credentials.');
     }

@@ -20,7 +20,16 @@ export interface Student {
   createdAt?: string;
 }
 
-export type User = Teacher | Student;
+export interface Admin {
+  id: string;
+  name: string;
+  email: string;
+  role: 'admin';
+  avatar?: string;
+  createdAt?: string;
+}
+
+export type User = Teacher | Student | Admin;
 
 // ─── Auth Types ───────────────────────────────────────────────────────────────
 

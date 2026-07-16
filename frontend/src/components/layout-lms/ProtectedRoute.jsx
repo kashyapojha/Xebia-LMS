@@ -2,7 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks-lms/useAuth';
 
 export default function ProtectedRoute({ children }) {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -16,7 +16,7 @@ export default function ProtectedRoute({ children }) {
     );
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || (user && user.role?.toLowerCase() !== 'admin')) {
     // Redirect to the login page and save the current location they tried to go to
     return <Navigate to="/?role=admin" state={{ from: location }} replace />;
   }

@@ -4,8 +4,10 @@ import {
   Plus, Search, Eye, Edit, Trash2, HelpCircle, Upload, 
   ArrowLeft, ArrowUp, ArrowDown, Copy, Settings, Check, 
   AlertTriangle, FileSpreadsheet, Download, RefreshCw,
-  Calendar, Clock, Users, CheckCircle2, FileText, Award 
+  Calendar, Clock, Users, CheckCircle2, FileText, Award,
+  ChevronUp, ChevronDown, ChevronRight, Sparkles
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Layout } from '../../components/layout/Layout';
 import { Button } from '../../components/ui/Button';
@@ -73,6 +75,13 @@ export const TeacherQuizzes: React.FC = () => {
   const [questionsList, setQuestionsList] = useState<any[]>([]);
   const [activeBuilderQuestion, setActiveBuilderQuestion] = useState<any | null>(null);
   const [activeBuilderIndex, setActiveBuilderIndex] = useState<number | null>(null);
+
+  // Premium UI local states
+  const [expandedQuestions, setExpandedQuestions] = useState<Record<number, boolean>>({});
+  const [shuffleQuestions, setShuffleQuestions] = useState(false);
+  const [randomizeOptions, setRandomizeOptions] = useState(false);
+  const [showResults, setShowResults] = useState(true);
+  const [autoPublish, setAutoPublish] = useState(true);
 
   // Assign Batch Modal State
   const [assignModalQuiz, setAssignModalQuiz] = useState<Assignment | null>(null);
@@ -573,7 +582,7 @@ export const TeacherQuizzes: React.FC = () => {
     if (activeBuilderQuestion) {
       return (
         <Layout role="teacher" title={activeBuilderIndex !== null ? 'Edit Question Details' : 'Add Question Details'} subtitle="Specify question details below">
-          <div className="max-w-3xl mx-auto space-y-6 select-none animate-fadeIn">
+          <div className="max-w-4xl mx-auto space-y-6 select-none animate-fadeIn">
             {/* Back button */}
             <button
               type="button"
@@ -581,94 +590,141 @@ export const TeacherQuizzes: React.FC = () => {
                 setActiveBuilderQuestion(null);
                 setActiveBuilderIndex(null);
               }}
-              className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6 cursor-pointer transition-colors"
+              className="flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100 mb-4 cursor-pointer transition-colors"
             >
-              <ArrowLeft size={16} /> Cancel and Back to Quiz Form
+              <ArrowLeft size={14} /> Cancel and Back to Quiz Workspace
             </button>
 
-            <Card className="bg-white dark:bg-[#1E293B] border border-slate-100 dark:border-slate-800/80 rounded-[16px] p-6 shadow-sm space-y-4">
-              <Select
-                label="Question Type"
-                value={activeBuilderQuestion.questionType || 'MCQ'}
-                onChange={(e) => {
-                  const type = e.target.value;
-                  let correct = activeBuilderQuestion.correctAnswer;
-                  if (type === 'TRUE_FALSE') correct = 'A';
-                  if (type === 'MCQ') correct = 'A';
-                  if (type === 'MSQ') correct = 'A';
-                  setActiveBuilderQuestion({ 
-                    ...activeBuilderQuestion, 
-                    questionType: type,
-                    correctAnswer: correct
-                  });
-                }}
-                options={[
-                  { value: 'MCQ', label: 'Multiple Choice (MCQ)' },
-                  { value: 'MSQ', label: 'Multiple Select (MSQ)' },
-                  { value: 'TRUE_FALSE', label: 'True / False' },
-                  { value: 'SHORT_ANSWER', label: 'Short Answer / Fill in Blank' }
-                ]}
-              />
+            {/* Question Card Form */}
+            <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-brand-border dark:border-slate-800 shadow-sm space-y-6">
+              
+              {/* Question Type selector */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">
+                  Question Type
+                </label>
+                <select
+                  value={activeBuilderQuestion.questionType || 'MCQ'}
+                  onChange={(e) => {
+                    const type = e.target.value;
+                    let correct = activeBuilderQuestion.correctAnswer;
+                    if (type === 'TRUE_FALSE') correct = 'A';
+                    if (type === 'MCQ') correct = 'A';
+                    if (type === 'MSQ') correct = 'A';
+                    setActiveBuilderQuestion({ 
+                      ...activeBuilderQuestion, 
+                      questionType: type,
+                      correctAnswer: correct
+                    });
+                  }}
+                  className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                >
+                  <option value="MCQ">Multiple Choice (MCQ)</option>
+                  <option value="MSQ">Multiple Select (MSQ)</option>
+                  <option value="TRUE_FALSE">True / False</option>
+                  <option value="SHORT_ANSWER">Short Answer / Fill in Blank</option>
+                </select>
+              </div>
 
-              <Textarea
-                label="Question Text"
-                required
-                rows={3}
-                value={activeBuilderQuestion.questionText}
-                onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, questionText: e.target.value })}
-                placeholder="e.g. Which of the following is a prime number?"
-              />
+              {/* Question Text */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">
+                  Question Text <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={activeBuilderQuestion.questionText}
+                  onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, questionText: e.target.value })}
+                  placeholder="e.g. Which of the following is a prime number?"
+                  className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-955 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none resize-none"
+                />
+              </div>
 
               {/* Render choices fields conditionally */}
               {(activeBuilderQuestion.questionType === 'MCQ' || activeBuilderQuestion.questionType === 'MSQ') && (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input label="Option A" required value={activeBuilderQuestion.optionA} onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, optionA: e.target.value })} />
-                    <Input label="Option B" required value={activeBuilderQuestion.optionB} onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, optionB: e.target.value })} />
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Option A <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={activeBuilderQuestion.optionA}
+                        onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, optionA: e.target.value })}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Option B <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        value={activeBuilderQuestion.optionB}
+                        onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, optionB: e.target.value })}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <Input label="Option C" required value={activeBuilderQuestion.optionC} onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, optionC: e.target.value })} />
-                    <Input label="Option D" required value={activeBuilderQuestion.optionD} onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, optionD: e.target.value })} />
-                  </div>
-                </>
-              )}
-
-              {activeBuilderQuestion.questionType === 'TRUE_FALSE' && (
-                <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-[var(--brand-border)] text-xs text-[var(--text-secondary)]">
-                  <div>
-                    <span className="font-bold">Option A:</span> True
-                  </div>
-                  <div>
-                    <span className="font-bold">Option B:</span> False
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Option C <span className="text-red-550">*</span></label>
+                      <input
+                        type="text"
+                        value={activeBuilderQuestion.optionC}
+                        onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, optionC: e.target.value })}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Option D <span className="text-red-550">*</span></label>
+                      <input
+                        type="text"
+                        value={activeBuilderQuestion.optionD}
+                        onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, optionD: e.target.value })}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="flex flex-col">
-                  <label className="text-sm font-medium text-[var(--text-primary)] mb-1">Correct Option(s)</label>
+              {activeBuilderQuestion.questionType === 'TRUE_FALSE' && (
+                <div className="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-brand-border dark:border-slate-800 text-xs text-brand-text-secondary select-none">
+                  <div>
+                    <span className="font-extrabold text-[#7A2676]">Option A:</span> True
+                  </div>
+                  <div>
+                    <span className="font-extrabold text-[#7A2676]">Option B:</span> False
+                  </div>
+                </div>
+              )}
+
+              {/* Answers & Scoring Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                {/* Correct Answers */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Correct Option(s)</label>
                   
                   {activeBuilderQuestion.questionType === 'MCQ' && (
-                    <Select
+                    <select
                       value={activeBuilderQuestion.correctAnswer}
                       onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, correctAnswer: e.target.value })}
-                      options={[
-                        { value: 'A', label: 'Option A' },
-                        { value: 'B', label: 'Option B' },
-                        { value: 'C', label: 'Option C' },
-                        { value: 'D', label: 'Option D' }
-                      ]}
-                    />
+                      className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                    >
+                      <option value="A">Option A</option>
+                      <option value="B">Option B</option>
+                      <option value="C">Option C</option>
+                      <option value="D">Option D</option>
+                    </select>
                   )}
 
                   {activeBuilderQuestion.questionType === 'MSQ' && (
-                    <div className="flex flex-wrap gap-2 py-1.5">
+                    <div className="flex flex-wrap gap-3 py-2 px-3 rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950">
                       {['A', 'B', 'C', 'D'].map((val) => {
                         const selectedList = String(activeBuilderQuestion.correctAnswer || '').split(',').map(s => s.trim()).filter(Boolean);
                         const isChecked = selectedList.includes(val);
 
                         return (
-                          <label key={val} className="flex items-center gap-1 text-xs cursor-pointer">
+                          <label key={val} className="flex items-center gap-1.5 text-xs font-bold cursor-pointer select-none">
                             <input
                               type="checkbox"
                               checked={isChecked}
@@ -682,7 +738,7 @@ export const TeacherQuizzes: React.FC = () => {
                                 newList.sort();
                                 setActiveBuilderQuestion({ ...activeBuilderQuestion, correctAnswer: newList.join(',') });
                               }}
-                              className="rounded border-[var(--brand-border)] text-[#6C1D5F] focus:ring-[#6C1D5F] shrink-0"
+                              className="rounded border-slate-300 text-[#7A2676] focus:ring-[#7A2676] shrink-0"
                             />
                             <span>{val}</span>
                           </label>
@@ -692,14 +748,14 @@ export const TeacherQuizzes: React.FC = () => {
                   )}
 
                   {activeBuilderQuestion.questionType === 'TRUE_FALSE' && (
-                    <Select
+                    <select
                       value={activeBuilderQuestion.correctAnswer}
                       onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, correctAnswer: e.target.value })}
-                      options={[
-                        { value: 'A', label: 'True (Option A)' },
-                        { value: 'B', label: 'False (Option B)' }
-                      ]}
-                    />
+                      className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                    >
+                      <option value="A">True (Option A)</option>
+                      <option value="B">False (Option B)</option>
+                    </select>
                   )}
 
                   {activeBuilderQuestion.questionType === 'SHORT_ANSWER' && (
@@ -709,46 +765,79 @@ export const TeacherQuizzes: React.FC = () => {
                       value={activeBuilderQuestion.correctAnswer}
                       onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, correctAnswer: e.target.value })}
                       placeholder="Enter correct text answer..."
-                      className="w-full bg-white dark:bg-[#1E293B] border border-[var(--brand-border)] focus:border-[#6C1D5F] text-[var(--text-primary)] rounded-xl py-2 px-3 text-xs transition-colors focus:outline-none"
+                      className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
                     />
                   )}
                 </div>
 
-                <Input 
-                  label="Marks" 
-                  type="number" 
-                  min={0.5} 
-                  step={0.5} 
-                  value={String(activeBuilderQuestion.marks)} 
-                  onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, marks: Number(e.target.value) })} 
-                />
-                
-                <Select
-                  label="Difficulty"
-                  value={activeBuilderQuestion.difficulty || 'Medium'}
-                  onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, difficulty: e.target.value as any })}
-                  options={[
-                    { value: 'Easy', label: 'Easy' },
-                    { value: 'Medium', label: 'Medium' },
-                    { value: 'Hard', label: 'Hard' }
-                  ]}
-                />
+                {/* Marks */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Marks</label>
+                  <input
+                    type="number"
+                    min={0.5}
+                    step={0.5}
+                    value={String(activeBuilderQuestion.marks)}
+                    onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, marks: Number(e.target.value) })}
+                    className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                  />
+                </div>
+
+                {/* Question Difficulty */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Difficulty</label>
+                  <select
+                    value={activeBuilderQuestion.difficulty || 'Medium'}
+                    onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, difficulty: e.target.value as any })}
+                    className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                  </select>
+                </div>
+
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Input label="Negative Marks (Optional)" type="number" min={0} step={0.25} value={String(activeBuilderQuestion.negativeMarks || 0)} onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, negativeMarks: Number(e.target.value) })} />
-                <Input label="Explanation (Optional)" placeholder="Explain why correct answer is correct..." value={activeBuilderQuestion.explanation || ''} onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, explanation: e.target.value })} />
+              {/* Negative Marks & Explanation */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Negative Marks (Optional)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.25}
+                    value={String(activeBuilderQuestion.negativeMarks || 0)}
+                    onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, negativeMarks: Number(e.target.value) })}
+                    className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Explanation (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="Explain why correct answer is correct..."
+                    value={activeBuilderQuestion.explanation || ''}
+                    onChange={(e) => setActiveBuilderQuestion({ ...activeBuilderQuestion, explanation: e.target.value })}
+                    className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                  />
+                </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-4 border-t border-[var(--brand-border)]">
-                <Button variant="ghost" onClick={() => {
-                  setActiveBuilderQuestion(null);
-                  setActiveBuilderIndex(null);
-                }}>
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t border-brand-border dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveBuilderQuestion(null);
+                    setActiveBuilderIndex(null);
+                  }}
+                  className="px-5 py-2 border border-brand-border dark:border-slate-800 hover:bg-slate-105 rounded-full text-xs font-bold text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+                >
                   Cancel
-                </Button>
-                <Button
-                  variant="outline"
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     if (!activeBuilderQuestion.questionText || !activeBuilderQuestion.questionText.trim()) {
                       toast.error('Question text is required.');
@@ -777,11 +866,12 @@ export const TeacherQuizzes: React.FC = () => {
                     setActiveBuilderIndex(null);
                     toast.success('Question saved. Add another question below.');
                   }}
+                  className="px-5 py-2 border border-brand-primary text-brand-primary hover:bg-brand-primary/5 rounded-full text-xs font-bold transition-all cursor-pointer"
                 >
                   Save & Add Another
-                </Button>
-                <Button
-                  variant="primary"
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     if (!activeBuilderQuestion.questionText || !activeBuilderQuestion.questionText.trim()) {
                       toast.error('Question text is required.');
@@ -798,11 +888,13 @@ export const TeacherQuizzes: React.FC = () => {
                     setActiveBuilderIndex(null);
                     toast.success('Question saved to builder list.');
                   }}
+                  className="px-5 py-2 bg-gradient-to-r from-[#4A1F4F] to-[#7A2676] hover:from-[#5A2460] hover:to-[#8B2F86] text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm"
                 >
                   Save Question
-                </Button>
+                </button>
               </div>
-            </Card>
+
+            </div>
           </div>
         </Layout>
       );
@@ -811,39 +903,121 @@ export const TeacherQuizzes: React.FC = () => {
     const pageTitle = isEditMode ? 'Edit Quiz' : 'Create Quiz';
     return (
       <Layout role="teacher" title={pageTitle} subtitle="Fill in the details below">
-        <div className="max-w-7xl mx-auto pb-24 px-4 sm:px-6 lg:px-8 select-none animate-fadeIn">
-          {/* Back button */}
-          <button
-            type="button"
-            onClick={handleCloseCreateModal}
-            className="flex items-center gap-2 text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] mb-6 cursor-pointer transition-colors"
-          >
-            <ArrowLeft size={16} /> Back to Quizzes
-          </button>
+        <div className="w-full pb-24 select-none animate-fadeIn">
+          
+          {/* Header breadcrumbs */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-brand-border dark:border-slate-800 mb-6">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1.5 text-[10px] uppercase font-extrabold text-slate-400 select-none">
+                <span>Dashboard</span>
+                <ChevronRight size={10} />
+                <span>Quiz</span>
+                <ChevronRight size={10} />
+                <span className="text-brand-primary">Create Quiz</span>
+              </div>
+              <h2 className="text-2xl font-black text-brand-text-primary dark:text-white flex items-center gap-2">
+                <Sparkles className="h-6 w-6 text-brand-primary shrink-0" />
+                {isEditMode ? 'Edit Quiz Details' : 'Create New Quiz'}
+              </h2>
+              <p className="text-xs text-brand-text-secondary dark:text-slate-400">
+                Create engaging quizzes for your students with manual or Excel-based question creation.
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-3 mt-4 md:mt-0 select-none">
+              <span className="text-[10px] font-bold text-slate-400">
+                Last saved: Just now
+              </span>
+              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase shadow-sm ${
+                questionsList.length === 0 ? 'bg-amber-100 text-amber-800 dark:bg-amber-955/40 dark:text-amber-300' : 'bg-purple-100 text-purple-800 dark:bg-purple-955/40 dark:text-purple-300'
+              }`}>
+                {questionsList.length === 0 ? 'Draft' : 'In Progress'}
+              </span>
+            </div>
+          </div>
 
-          <form className="grid grid-cols-1 lg:grid-cols-3 gap-6" onSubmit={(e) => e.preventDefault()}>
-            {/* Left Section */}
-            <div className="lg:col-span-2 space-y-6">
+          {/* 3-Section Layout Grid */}
+          <form className="grid grid-cols-1 lg:grid-cols-10 gap-8" onSubmit={(e) => e.preventDefault()}>
+            
+            {/* Left Workspace Column (70% on desktop) */}
+            <div className="lg:col-span-7 space-y-6">
+              
               {/* Quiz Information Card */}
-              <Card className="rounded-[18px] shadow-sm bg-white dark:bg-slate-900 border border-[var(--brand-border)] p-6">
-                <h3 className="text-sm font-bold text-[var(--text-primary)] mb-5 pb-3 border-b border-[var(--brand-border)] flex items-center gap-2.5">
-                  <FileText size={18} className="text-[#6C1D5F] dark:text-purple-400" />
-                  Quiz Information
+              <Card className="rounded-[18px] shadow-sm bg-white dark:bg-slate-900 border border-brand-border dark:border-slate-800 p-6 space-y-5">
+                <h3 className="text-xs font-bold text-brand-text-secondary uppercase tracking-wider border-b border-brand-border dark:border-slate-800 pb-2.5 flex items-center gap-2">
+                  <FileText className="h-4.5 w-4.5 text-brand-primary" /> Quiz Details
                 </h3>
+                
                 <div className="space-y-4">
-                  <Input label="Quiz Title" placeholder="e.g. Midterm Physics Evaluation" required value={quizTitle} onChange={(e) => setQuizTitle(e.target.value)} />
-                  <Textarea label="Instructions" placeholder="Specific instructions for candidates..." rows={3} value={quizInstructions} onChange={(e) => setQuizInstructions(e.target.value)} />
-                  <Textarea label="Description" placeholder="Enter short quiz description..." rows={3} value={quizDescription} onChange={(e) => setQuizDescription(e.target.value)} />
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Quiz Title <span className="text-red-500">*</span></label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Midterm Physics Evaluation"
+                      value={quizTitle}
+                      onChange={(e) => setQuizTitle(e.target.value)}
+                      className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Subject</label>
+                      <select
+                        value={quizSubject}
+                        onChange={(e) => setQuizSubject(e.target.value)}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      >
+                        {SUBJECTS.filter(s => s !== 'All').map(s => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Topic / Category</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Gravitation"
+                        value={quizTopic}
+                        onChange={(e) => setQuizTopic(e.target.value)}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Instructions</label>
+                    <textarea
+                      placeholder="Specific instructions for candidates..."
+                      rows={3}
+                      value={quizInstructions}
+                      onChange={(e) => setQuizInstructions(e.target.value)}
+                      className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none resize-none"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Description</label>
+                    <textarea
+                      placeholder="Enter short quiz description..."
+                      rows={3}
+                      value={quizDescription}
+                      onChange={(e) => setQuizDescription(e.target.value)}
+                      className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none resize-none"
+                    />
+                  </div>
                 </div>
               </Card>
 
-              {/* Segmented tabs */}
+              {/* Segmented Creator Tab Selectors */}
               <div className="flex justify-center select-none">
-                <div className="flex gap-1 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-full border border-slate-200/50 dark:border-slate-800/60 w-full">
+                <div className="flex gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-full border border-slate-200/50 dark:border-slate-800/60 w-full">
                   <button
                     type="button"
                     onClick={() => setActiveCreatorTab('manual')}
-                    className={`flex-1 py-2.5 px-4 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 py-2.5 px-4 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       activeCreatorTab === 'manual'
                         ? 'bg-[#6C1D5F] text-white shadow-sm'
                         : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
@@ -855,7 +1029,7 @@ export const TeacherQuizzes: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setActiveCreatorTab('import')}
-                    className={`flex-1 py-2.5 px-4 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                    className={`flex-1 py-2.5 px-4 rounded-full text-xs font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                       activeCreatorTab === 'import'
                         ? 'bg-[#6C1D5F] text-white shadow-sm'
                         : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100'
@@ -867,19 +1041,16 @@ export const TeacherQuizzes: React.FC = () => {
                 </div>
               </div>
 
-              {/* Builder Panels */}
+              {/* Manual Question Builder Workspace segment */}
               {activeCreatorTab === 'manual' ? (
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b border-[var(--brand-border)]">
+                  <div className="flex items-center justify-between pb-2 border-b border-brand-border dark:border-slate-800">
                     <div>
-                      <h3 className="text-sm font-bold text-[var(--text-primary)]">Question Builder</h3>
-                      <p className="text-[11px] text-[var(--text-secondary)]">Create and organize quiz questions below</p>
+                      <h3 className="text-sm font-bold text-brand-text-primary dark:text-slate-100">Question Workspace</h3>
+                      <p className="text-[10px] text-brand-text-secondary dark:text-slate-400 mt-0.5">Build and reorder questions below</p>
                     </div>
-                    <Button
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      icon={<Plus size={14} />}
                       onClick={() => {
                         setActiveBuilderQuestion({
                           questionType: 'MCQ',
@@ -896,18 +1067,18 @@ export const TeacherQuizzes: React.FC = () => {
                         });
                         setActiveBuilderIndex(null);
                       }}
-                      className="cursor-pointer"
+                      className="px-4 py-2 border border-brand-primary text-brand-primary hover:bg-brand-primary/5 rounded-full text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
                     >
-                      Add Question
-                    </Button>
+                      <Plus size={14} /> Add Question
+                    </button>
                   </div>
 
-                  {/* Questions list */}
+                  {/* Collapsible Questions list */}
                   {questionsList.length === 0 ? (
-                    <div className="text-center py-12 border-2 border-dashed border-[var(--brand-border)] rounded-2xl bg-white dark:bg-slate-900/10">
-                      <HelpCircle className="mx-auto mb-2 text-[var(--text-secondary)] animate-bounce" size={24} />
-                      <p className="text-xs font-semibold text-[var(--text-primary)]">Workspace Empty</p>
-                      <p className="text-[11px] text-[var(--text-secondary)] mt-1">Start by adding a question manually or import from Excel.</p>
+                    <div className="text-center py-16 border-2 border-dashed border-brand-border dark:border-slate-850 rounded-2xl bg-white dark:bg-slate-900/10">
+                      <HelpCircle className="mx-auto mb-2 text-brand-text-secondary animate-bounce" size={28} />
+                      <p className="text-xs font-bold text-brand-text-primary dark:text-slate-200">Quiz Workspace Empty</p>
+                      <p className="text-[11px] text-brand-text-secondary mt-1">Start by clicking the "Add Question" button above or switch to Excel bulk uploads.</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -915,30 +1086,125 @@ export const TeacherQuizzes: React.FC = () => {
                         const errs = getQuestionErrors(q);
                         const isInvalid = errs.length > 0;
                         const isCurrentlyEditing = activeBuilderIndex === idx;
+                        const isExpanded = !!expandedQuestions[idx];
 
                         return (
                           <div
                             key={idx}
-                            className={`p-5 rounded-2xl border shadow-sm transition-all ${
+                            className={`rounded-2xl border shadow-sm transition-all overflow-hidden ${
                               isInvalid
                                 ? 'bg-rose-50/10 border-rose-200 dark:border-rose-900/30'
                                 : isCurrentlyEditing
-                                ? 'bg-[#6C1D5F05] border-[#6C1D5F]'
-                                : 'bg-white dark:bg-slate-800/10 border-[var(--brand-border)]'
+                                ? 'bg-purple-500/5 border-brand-primary'
+                                : 'bg-white dark:bg-slate-900 border-brand-border dark:border-slate-800'
                             }`}
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex-1 space-y-3 min-w-0">
+                            {/* Collapsible Header */}
+                            <div 
+                              onClick={() => setExpandedQuestions(p => ({ ...p, [idx]: !p[idx] }))}
+                              className="p-4 flex items-center justify-between gap-3 cursor-pointer select-none hover:bg-slate-55 dark:hover:bg-slate-850 transition-colors"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="w-6 h-6 rounded-lg bg-slate-100 dark:bg-slate-800 text-xs font-black flex items-center justify-center shrink-0 text-slate-700 dark:text-slate-300">
+                                  {idx + 1}
+                                </span>
                                 <div className="flex items-center gap-2">
-                                  <span className="w-5 h-5 rounded-md bg-slate-100 dark:bg-slate-800 text-[10px] font-bold flex items-center justify-center shrink-0">
-                                    {idx + 1}
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${
+                                    q.questionType === 'MCQ'
+                                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300'
+                                      : q.questionType === 'MSQ'
+                                      ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300'
+                                      : q.questionType === 'TRUE_FALSE'
+                                      ? 'bg-teal-100 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300'
+                                      : 'bg-amber-105 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300'
+                                  }`}>
+                                    {q.questionType}
                                   </span>
-                                  <h4 className="text-xs font-bold text-[var(--text-primary)] leading-relaxed">{q.questionText}</h4>
+                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase ${
+                                    q.difficulty === 'Easy'
+                                      ? 'bg-emerald-105 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-350'
+                                      : q.difficulty === 'Hard'
+                                      ? 'bg-red-105 text-red-700 dark:bg-red-950/40 dark:text-red-350'
+                                      : 'bg-amber-105 text-amber-700 dark:bg-amber-950/40 dark:text-amber-350'
+                                  }`}>
+                                    {q.difficulty}
+                                  </span>
+                                  <span className="text-[10px] font-extrabold text-[#2563EB]">
+                                    {q.marks} pts
+                                  </span>
                                 </div>
+                                <h4 className="text-xs font-bold text-brand-text-primary dark:text-slate-205 truncate max-w-sm sm:max-w-md md:max-w-lg">
+                                  {q.questionText}
+                                </h4>
+                              </div>
 
-                                {/* MCQ/MSQ options display */}
+                              <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+                                {/* Move buttons */}
+                                <button
+                                  type="button"
+                                  disabled={idx === 0}
+                                  onClick={() => moveQuestion(idx, 'up')}
+                                  className="p-1 text-slate-400 hover:text-brand-primary dark:hover:text-purple-300 disabled:opacity-30 rounded transition-colors cursor-pointer"
+                                >
+                                  <ArrowUp size={14} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={idx === questionsList.length - 1}
+                                  onClick={() => moveQuestion(idx, 'down')}
+                                  className="p-1 text-slate-400 hover:text-brand-primary dark:hover:text-purple-300 disabled:opacity-30 rounded transition-colors cursor-pointer"
+                                >
+                                  <ArrowDown size={14} />
+                                </button>
+
+                                {/* Duplicate */}
+                                <button
+                                  type="button"
+                                  onClick={() => duplicateQuestion(idx)}
+                                  className="p-1.5 text-slate-400 hover:text-brand-primary dark:hover:text-purple-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                  title="Duplicate"
+                                >
+                                  <Copy size={13} />
+                                </button>
+
+                                {/* Edit */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setActiveBuilderQuestion({ ...q });
+                                    setActiveBuilderIndex(idx);
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-blue-600 rounded-lg hover:bg-slate-105 dark:hover:bg-slate-850 transition-colors cursor-pointer"
+                                  title="Edit"
+                                >
+                                  <Edit size={13} />
+                                </button>
+
+                                {/* Delete */}
+                                <button
+                                  type="button"
+                                  onClick={() => deleteQuestion(idx)}
+                                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg transition-colors cursor-pointer"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+
+                                <span className="p-1 text-slate-400">
+                                  {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Card Body content */}
+                            {isExpanded && (
+                              <div className="p-5 border-t border-brand-border dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/20 space-y-4 text-xs">
+                                <p className="font-semibold text-brand-text-primary dark:text-slate-200">
+                                  {q.questionText}
+                                </p>
+
                                 {(q.questionType === 'MCQ' || q.questionType === 'MSQ') && (
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-7">
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-2">
                                     {['A', 'B', 'C', 'D'].map((optKey) => {
                                       const val = q[`option${optKey}`];
                                       const isCorrect = q.questionType === 'MSQ'
@@ -946,68 +1212,88 @@ export const TeacherQuizzes: React.FC = () => {
                                         : q.correctAnswer === optKey;
 
                                       return (
-                                        <p key={optKey} className={`text-[10px] px-2 py-1.5 rounded-lg border ${
-                                          isCorrect
-                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold'
-                                            : 'border-[var(--brand-border)] text-[var(--text-secondary)]'
-                                        }`}>
-                                          <span className="font-bold mr-1">{optKey}:</span> {val}
-                                        </p>
+                                        <div 
+                                          key={optKey} 
+                                          className={`flex items-start gap-2.5 p-3 rounded-xl border transition-all ${
+                                            isCorrect
+                                              ? 'bg-emerald-500/5 border-emerald-500/30 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                              : 'bg-white dark:bg-slate-900 border-brand-border dark:border-slate-800 text-brand-text-secondary'
+                                          }`}
+                                        >
+                                          <input
+                                            type={q.questionType === 'MCQ' ? 'radio' : 'checkbox'}
+                                            disabled
+                                            checked={isCorrect}
+                                            className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                          />
+                                          <span className="leading-relaxed"><strong className="mr-1">{optKey}:</strong> {val}</span>
+                                          {isCorrect && (
+                                            <span className="ml-auto px-2 py-0.5 rounded bg-emerald-500/20 text-[8px] font-extrabold uppercase tracking-wide">
+                                              Correct
+                                            </span>
+                                          )}
+                                        </div>
                                       );
                                     })}
                                   </div>
                                 )}
 
                                 {q.questionType === 'TRUE_FALSE' && (
-                                  <div className="grid grid-cols-2 gap-2 pl-7">
+                                  <div className="grid grid-cols-2 gap-3 pl-2">
                                     {['A', 'B'].map((optKey) => {
                                       const isCorrect = q.correctAnswer === optKey;
                                       const label = optKey === 'A' ? 'True' : 'False';
+
                                       return (
-                                        <p key={optKey} className={`text-[10px] px-2 py-1.5 rounded-lg border ${
-                                          isCorrect
-                                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold'
-                                            : 'border-[var(--brand-border)] text-[var(--text-secondary)]'
-                                        }`}>
-                                          <span className="font-bold mr-1">{label}</span>
-                                        </p>
+                                        <div 
+                                          key={optKey} 
+                                          className={`flex items-start gap-2.5 p-3 rounded-xl border transition-all ${
+                                            isCorrect
+                                              ? 'bg-emerald-500/5 border-emerald-500/30 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-300'
+                                              : 'bg-white dark:bg-slate-900 border-brand-border dark:border-slate-800 text-brand-text-secondary'
+                                          }`}
+                                        >
+                                          <input
+                                            type="radio"
+                                            disabled
+                                            checked={isCorrect}
+                                            className="mt-0.5 rounded-full border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                          />
+                                          <span className="font-bold leading-none">{label}</span>
+                                          {isCorrect && (
+                                            <span className="ml-auto px-2 py-0.5 rounded bg-emerald-500/20 text-[8px] font-extrabold uppercase tracking-wide">
+                                              Correct
+                                            </span>
+                                          )}
+                                        </div>
                                       );
                                     })}
                                   </div>
                                 )}
 
-                                <div className="flex flex-wrap items-center gap-2 text-[10px] text-[var(--text-secondary)] pl-7">
-                                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 font-medium">Type: {q.questionType}</span>
-                                  <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/30 text-[#2563EB] font-medium">Marks: {q.marks}</span>
-                                  {q.negativeMarks > 0 && <span className="px-2 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 font-medium">Neg: -{q.negativeMarks}</span>}
-                                  <span className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 font-medium">Diff: {q.difficulty}</span>
-                                </div>
-                              </div>
+                                {q.questionType === 'SHORT_ANSWER' && (
+                                  <div className="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300 flex items-center gap-2 pl-4">
+                                    <span className="font-extrabold text-[10px] uppercase bg-emerald-500/20 px-2 py-0.5 rounded">Correct Answer</span>
+                                    <span className="font-bold">{q.correctAnswer}</span>
+                                  </div>
+                                )}
 
-                              <div className="flex gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setActiveBuilderQuestion({ ...q });
-                                    setActiveBuilderIndex(idx);
-                                  }}
-                                  className="p-1.5 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg cursor-pointer"
-                                >
-                                  <Edit size={14} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const updated = questionsList.filter((_, i) => i !== idx);
-                                    setQuestionsList(updated);
-                                    toast.success('Question deleted.');
-                                  }}
-                                  className="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/20 rounded-lg cursor-pointer"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
+                                {(q.explanation || q.negativeMarks > 0) && (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-brand-border dark:border-slate-800/80">
+                                    {q.negativeMarks > 0 && (
+                                      <p className="text-[10px] text-rose-500 font-extrabold flex items-center gap-1">
+                                        <AlertTriangle size={12} /> Negative Marks: -{q.negativeMarks} pts
+                                      </p>
+                                    )}
+                                    {q.explanation && (
+                                      <p className="text-[11px] text-brand-text-secondary leading-relaxed italic">
+                                        <strong>Explanation:</strong> {q.explanation}
+                                      </p>
+                                    )}
+                                  </div>
+                                )}
                               </div>
-                            </div>
+                            )}
                           </div>
                         );
                       })}
@@ -1015,36 +1301,41 @@ export const TeacherQuizzes: React.FC = () => {
                   )}
                 </div>
               ) : (
-                /* Excel upload template panel */
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between pb-2 border-b border-[var(--brand-border)]">
+                /* Excel Bulk Upload segment */
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between pb-2 border-b border-brand-border dark:border-slate-800">
                     <div>
-                      <h3 className="text-sm font-bold text-[var(--text-primary)]">Excel Import</h3>
-                      <p className="text-[11px] text-[var(--text-secondary)]">Import questions in bulk via template sheet</p>
+                      <h3 className="text-sm font-bold text-brand-text-primary dark:text-slate-100">Excel Bulk Import</h3>
+                      <p className="text-[10px] text-brand-text-secondary dark:text-slate-400 mt-0.5">Import quiz questions via Excel sheet templates</p>
                     </div>
-                    <Button
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      icon={<Download size={13} />}
                       onClick={downloadExcelTemplate}
+                      className="px-4 py-2 border border-brand-border dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 select-none"
                     >
-                      Download Template
-                    </Button>
+                      <Download size={13} /> Template Sheet
+                    </button>
                   </div>
 
                   <div
-                    className={`drop-zone p-8 text-center border-dashed border-2 rounded-2xl cursor-pointer ${
-                      isExcelDragging ? 'bg-[#6C1D5F]/5 border-[#6C1D5F]' : 'border-[var(--brand-border)] hover:border-slate-400'
+                    className={`p-10 text-center border-2 border-dashed rounded-2xl cursor-pointer transition-all ${
+                      isExcelDragging 
+                        ? 'bg-purple-500/5 border-brand-primary' 
+                        : 'border-brand-border dark:border-slate-800 hover:border-brand-primary bg-slate-50/50 dark:bg-slate-900/30'
                     } ${isExcelUploading ? 'opacity-50 pointer-events-none' : ''}`}
                     onDragOver={(e) => { if (!isExcelUploading) { e.preventDefault(); setIsExcelDragging(true); } }}
                     onDragLeave={() => setIsExcelDragging(false)}
                     onDrop={onExcelDrop}
                     onClick={() => { if (!isExcelUploading) excelRef.current?.click(); }}
                   >
-                    <Upload size={28} className="mx-auto mb-2 text-[#6C1D5F] dark:text-purple-405" />
-                    <p className="text-xs font-semibold text-[var(--text-primary)]">{isExcelUploading ? 'Uploading & Parsing...' : 'Drag & Drop Excel Spreadsheet here'}</p>
-                    <p className="text-[10px] text-[var(--text-secondary)] mt-1">or click to browse local files (.xlsx, .xls) · Max 10MB</p>
+                    <Upload size={32} className="mx-auto mb-2 text-[#7A2676] dark:text-purple-400 shrink-0" />
+                    <p className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">
+                      {isExcelUploading ? 'Uploading & Parsing questions...' : 'Drag & Drop Excel Spreadsheet here'}
+                    </p>
+                    <p className="text-[10px] text-brand-text-secondary dark:text-slate-400 mt-1">
+                      or click to browse local files (.xlsx, .xls) · Max 10MB
+                    </p>
+                    
                     <input
                       ref={excelRef}
                       type="file"
@@ -1055,31 +1346,31 @@ export const TeacherQuizzes: React.FC = () => {
                     />
                   </div>
 
-                  <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-[10px] text-[var(--text-secondary)] space-y-1.5 leading-normal">
-                    <p className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
-                      <AlertTriangle size={12} /> Excel Structure Specifications
+                  <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-[10px] text-brand-text-secondary space-y-1.5 leading-normal">
+                    <p className="font-extrabold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <AlertTriangle size={12} /> Excel Sheet Structure Guidelines
                     </p>
                     <p>1. Row 1: Headers (Question, Option A, Option B, Option C, Option D, Correct Answer, Marks, Difficulty).</p>
                     <p>2. Correct Answer values: A, B, C, or D.</p>
-                    <p>3. Blank Option C/D columns resolve to a True/False statement.</p>
+                    <p>3. Blank Option C/D fields are resolved as True/False statements.</p>
                   </div>
 
-                  {/* Imported preview list */}
+                  {/* Excel import preview list */}
                   {questionsList.length > 0 && (
                     <div className="space-y-3">
-                      <h4 className="text-xs font-bold text-[var(--text-primary)] border-b border-[var(--brand-border)] pb-2 mt-4">
+                      <h4 className="text-xs font-bold text-brand-text-primary dark:text-slate-205 border-b border-brand-border dark:border-slate-800 pb-2 mt-4">
                         Imported Questions Preview ({questionsList.length})
                       </h4>
-                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
                         {questionsList.map((q, idx) => (
-                          <div key={idx} className="p-3 bg-white dark:bg-slate-800 border border-[var(--brand-border)] rounded-xl flex items-start gap-2.5 shadow-sm text-xs">
-                            <span className="w-5 h-5 rounded bg-slate-100 dark:bg-slate-700 text-[10px] font-bold flex items-center justify-center shrink-0">
+                          <div key={idx} className="p-3 bg-white dark:bg-slate-900 border border-brand-border dark:border-slate-800 rounded-xl flex items-start gap-2.5 shadow-sm text-xs">
+                            <span className="w-5.5 h-5.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-bold flex items-center justify-center shrink-0 text-slate-705 dark:text-slate-300">
                               {idx + 1}
                             </span>
                             <div>
-                              <p className="font-bold text-[var(--text-primary)]">{q.questionText}</p>
-                              <p className="text-[10px] text-[var(--text-secondary)] mt-1">
-                                Type: {q.questionType} • Marks: {q.marks} • Answer: <span className="text-emerald-600 font-bold">{q.correctAnswer}</span>
+                              <p className="font-bold text-brand-text-primary dark:text-slate-200">{q.questionText}</p>
+                              <p className="text-[10px] text-brand-text-secondary dark:text-slate-400 mt-1">
+                                Type: {q.questionType} • Marks: {q.marks} • Correct answer: <span className="text-emerald-600 font-extrabold">{q.correctAnswer}</span>
                               </p>
                             </div>
                           </div>
@@ -1091,137 +1382,251 @@ export const TeacherQuizzes: React.FC = () => {
               )}
             </div>
 
-            {/* Right Section */}
-            <div className="space-y-6">
-              {/* Quiz Settings Card */}
-              <Card className="rounded-[18px] shadow-sm bg-white dark:bg-slate-900 border border-[var(--brand-border)] p-6">
-                <h3 className="text-sm font-bold text-[var(--text-primary)] mb-4 pb-3 border-b border-[var(--brand-border)] flex items-center gap-2.5">
-                  <Settings size={18} className="text-[#6C1D5F] dark:text-purple-400" />
-                  Quiz Settings
-                </h3>
-                <div className="space-y-4">
-                  <Select
-                    label="Subject"
-                    value={quizSubject}
-                    onChange={(e) => setQuizSubject(e.target.value)}
-                    options={SUBJECTS.filter(s => s !== 'All').map(s => ({ value: s, label: s }))}
-                  />
-                  <Input label="Topic / Category" placeholder="e.g. Gravitation" value={quizTopic} onChange={(e) => setQuizTopic(e.target.value)} />
-                  <Input label="Due Date" type="date" min={todayDate} required value={quizDueDate} onChange={(e) => setQuizDueDate(e.target.value)} />
-                  <Input label="Time Limit (Mins)" type="number" min={5} value={String(quizTimeLimit)} onChange={(e) => setQuizTimeLimit(Number(e.target.value))} />
-                  <Input label="Attempts Allowed" type="number" min={1} value={String(quizAttempts)} onChange={(e) => setQuizAttempts(Number(e.target.value))} />
-                  <Select
-                    label="Difficulty Level"
-                    value={quizDifficulty}
-                    onChange={(e) => setQuizDifficulty(e.target.value as any)}
-                    options={[
-                      { value: 'Easy', label: 'Easy' },
-                      { value: 'Medium', label: 'Medium' },
-                      { value: 'Hard', label: 'Hard' }
-                    ]}
-                  />
-                </div>
-              </Card>
+            {/* Right Settings Column (30% on desktop) */}
+            <div className="lg:col-span-3 space-y-6">
+              
+              {/* Sticky Settings Container */}
+              <div className="lg:sticky lg:top-6 space-y-6 max-h-[calc(100vh-120px)] overflow-y-auto pr-1">
+                
+                {/* Quiz Settings Panel */}
+                <Card className="rounded-[18px] shadow-sm bg-white dark:bg-slate-900 border border-brand-border dark:border-slate-800 p-5 space-y-4">
+                  <h3 className="text-xs font-bold text-brand-text-secondary uppercase tracking-wider border-b border-brand-border dark:border-slate-800 pb-2.5 flex items-center gap-2 select-none">
+                    <Settings className="h-4.5 w-4.5 text-brand-primary" /> Quiz Settings
+                  </h3>
+                  
+                  <div className="space-y-3.5">
+                    
+                    {/* Due Date */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Due Date <span className="text-red-500">*</span></label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                        <input
+                          type="date"
+                          min={todayDate}
+                          required
+                          value={quizDueDate}
+                          onChange={(e) => setQuizDueDate(e.target.value)}
+                          className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 pl-10 pr-4 py-2 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                        />
+                      </div>
+                    </div>
 
-              {/* Certificate & Eligibility Card */}
-              <Card className="rounded-[18px] shadow-sm bg-white dark:bg-slate-900 border border-[var(--brand-border)] p-6">
-                <h3 className="text-sm font-bold text-[var(--text-primary)] mb-4 pb-3 border-b border-[var(--brand-border)] flex items-center gap-2.5">
-                  <Award size={18} className="text-[#6C1D5F] dark:text-purple-400" />
-                  Eligibility & Score
-                </h3>
-                <div className="space-y-4">
-                  <Input label="Passing Marks (%)" type="number" min={10} max={100} value={String(passingPercentage)} onChange={(e) => setPassingPercentage(Number(e.target.value))} />
-                  <div>
-                    <Input label="Certificate Eligibility Marks (%)" type="number" min={10} max={100} value={String(quizCertEligibilityMarks)} onChange={(e) => setQuizCertEligibilityMarks(Number(e.target.value))} />
-                    <p className="text-[10px] text-[var(--text-secondary)] mt-2 leading-relaxed">
-                      Students must achieve at least these marks to become eligible for course certificate generation.
+                    {/* Time Limit */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Time Limit (Mins)</label>
+                      <div className="relative">
+                        <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                        <input
+                          type="number"
+                          min={5}
+                          value={String(quizTimeLimit)}
+                          onChange={(e) => setQuizTimeLimit(Number(e.target.value))}
+                          className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 pl-10 pr-4 py-2 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Attempts Allowed */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Attempts Allowed</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={String(quizAttempts)}
+                        onChange={(e) => setQuizAttempts(Number(e.target.value))}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Difficulty */}
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-205">Difficulty Level</label>
+                      <select
+                        value={quizDifficulty}
+                        onChange={(e) => setQuizDifficulty(e.target.value as any)}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-955 px-4 py-2.5 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      >
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
+                      </select>
+                    </div>
+
+                    {/* Premium Toggles */}
+                    <div className="pt-2 space-y-3 border-t border-brand-border dark:border-slate-800">
+                      <label className="flex items-center justify-between text-xs font-bold text-brand-text-primary dark:text-slate-200 cursor-pointer select-none">
+                        <span>Shuffle Questions</span>
+                        <input
+                          type="checkbox"
+                          checked={shuffleQuestions}
+                          onChange={(e) => setShuffleQuestions(e.target.checked)}
+                          className="rounded text-[#7A2676] focus:ring-[#7A2676] w-4.5 h-4.5 cursor-pointer"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between text-xs font-bold text-brand-text-primary dark:text-slate-200 cursor-pointer select-none">
+                        <span>Randomize Options</span>
+                        <input
+                          type="checkbox"
+                          checked={randomizeOptions}
+                          onChange={(e) => setRandomizeOptions(e.target.checked)}
+                          className="rounded text-[#7A2676] focus:ring-[#7A2676] w-4.5 h-4.5 cursor-pointer"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between text-xs font-bold text-brand-text-primary dark:text-slate-200 cursor-pointer select-none">
+                        <span>Show Results to Students</span>
+                        <input
+                          type="checkbox"
+                          checked={showResults}
+                          onChange={(e) => setShowResults(e.target.checked)}
+                          className="rounded text-[#7A2676] focus:ring-[#7A2676] w-4.5 h-4.5 cursor-pointer"
+                        />
+                      </label>
+
+                      <label className="flex items-center justify-between text-xs font-bold text-brand-text-primary dark:text-slate-200 cursor-pointer select-none">
+                        <span>Auto Publish</span>
+                        <input
+                          type="checkbox"
+                          checked={autoPublish}
+                          onChange={(e) => setAutoPublish(e.target.checked)}
+                          className="rounded text-[#7A2676] focus:ring-[#7A2676] w-4.5 h-4.5 cursor-pointer"
+                        />
+                      </label>
+                    </div>
+
+                  </div>
+                </Card>
+
+                {/* Score & Eligibility Card */}
+                <Card className="rounded-[18px] shadow-sm bg-white dark:bg-slate-900 border border-brand-border dark:border-slate-800 p-5 space-y-4">
+                  <h3 className="text-xs font-bold text-brand-text-secondary uppercase tracking-wider border-b border-brand-border dark:border-slate-800 pb-2.5 flex items-center gap-2 select-none">
+                    <Award className="h-4.5 w-4.5 text-brand-primary" /> Score & Eligibility
+                  </h3>
+
+                  <div className="space-y-3.5">
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Passing Marks (%)</label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={100}
+                        value={String(passingPercentage)}
+                        onChange={(e) => setPassingPercentage(Number(e.target.value))}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-4 py-2 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-text-primary dark:text-slate-200">Cert Eligibility Marks (%)</label>
+                      <input
+                        type="number"
+                        min={10}
+                        max={100}
+                        value={String(quizCertEligibilityMarks)}
+                        onChange={(e) => setQuizCertEligibilityMarks(Number(e.target.value))}
+                        className="w-full rounded-xl border border-brand-border dark:border-slate-800 bg-slate-50 dark:bg-slate-955 px-4 py-2 text-xs font-semibold text-brand-text-primary dark:text-white focus:border-brand-primary focus:outline-none"
+                      />
+                      <p className="text-[9px] text-brand-text-secondary dark:text-slate-400 leading-normal pt-1 italic">
+                        Marks required to become eligible for course certificate.
+                      </p>
+                    </div>
+
+                    {/* Scoring Summary Banner */}
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-brand-border space-y-2.5 text-xs select-none">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[9px]">Questions:</span>
+                        <span className="font-black text-slate-850 dark:text-slate-100">{questionsList.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[9px]">Total Marks:</span>
+                        <span className="font-black text-[#2563EB]">{questionsList.reduce((sum, q) => sum + Number(q.marks || 0), 0)} pts</span>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-brand-border pt-2 mt-1">
+                        <span className="font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[9px]">Passing Mark:</span>
+                        <span className="font-black text-emerald-600">
+                          {Math.round(questionsList.reduce((sum, q) => sum + Number(q.marks || 0), 0) * (passingPercentage / 100))} pts ({passingPercentage}%)
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Target Batches Card */}
+                <Card className="rounded-[18px] shadow-sm bg-white dark:bg-slate-900 border border-brand-border dark:border-slate-800 p-5 space-y-4">
+                  <h3 className="text-xs font-bold text-brand-text-secondary uppercase tracking-wider border-b border-brand-border dark:border-slate-800 pb-2.5 flex items-center gap-2 select-none">
+                    <Users className="h-4.5 w-4.5 text-brand-primary" /> Target Batches
+                  </h3>
+
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border border-brand-border p-3 rounded-xl bg-slate-50/50 dark:bg-slate-900/30 shadow-inner">
+                      {batches.length === 0 ? (
+                        <p className="text-xs text-brand-text-secondary italic col-span-full">No batches available.</p>
+                      ) : (
+                        batches.map((b) => {
+                          const isChecked = quizBatchIds.includes(String(b.id));
+                          return (
+                            <label key={b.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100/50 dark:hover:bg-slate-850 cursor-pointer text-xs text-brand-text-primary transition-all select-none">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => {
+                                  if (isChecked) {
+                                    setQuizBatchIds(quizBatchIds.filter((id: string) => id !== String(b.id)));
+                                  } else {
+                                    setQuizBatchIds([...quizBatchIds, String(b.id)]);
+                                  }
+                                }}
+                                className="rounded border-slate-350 dark:border-slate-700 text-[#7A2676] focus:ring-[#7A2676] w-4.5 h-4.5 cursor-pointer"
+                              />
+                              <span className="font-semibold text-slate-750 dark:text-slate-200">{b.batchName}</span>
+                            </label>
+                          );
+                        })
+                      )}
+                    </div>
+                    <p className="text-[9px] text-brand-text-secondary italic leading-relaxed pt-1">
+                      Leave batches unchecked to save as draft. Select at least one batch to publish the quiz.
                     </p>
                   </div>
+                </Card>
 
-                  {/* Score Summary Banner */}
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800/85 space-y-2.5 text-xs select-none">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Questions:</span>
-                      <span className="font-black text-slate-850 dark:text-slate-100">{questionsList.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-405 dark:text-slate-500 uppercase tracking-wider">Total Marks:</span>
-                      <span className="font-black text-[#2563EB]">{questionsList.reduce((sum, q) => sum + Number(q.marks || 0), 0)} pts</span>
-                    </div>
-                    <div className="flex items-center justify-between border-t border-[var(--brand-border)] pt-2 mt-1">
-                      <span className="font-semibold text-slate-405 dark:text-slate-500 uppercase tracking-wider">Passing Mark:</span>
-                      <span className="font-black text-emerald-600">
-                        {Math.round(questionsList.reduce((sum, q) => sum + Number(q.marks || 0), 0) * (passingPercentage / 100))} pts ({passingPercentage}%)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              </div>
 
-              {/* Target Batches Card */}
-              <Card className="rounded-[18px] shadow-sm bg-white dark:bg-slate-900 border border-[var(--brand-border)] p-6">
-                <h3 className="text-sm font-bold text-[var(--text-primary)] mb-4 pb-3 border-b border-[var(--brand-border)] flex items-center gap-2.5">
-                  <Users size={18} className="text-[#6C1D5F] dark:text-purple-400" />
-                  Target Batches
-                </h3>
-                <div className="space-y-2">
-                  <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto border border-slate-100 dark:border-slate-800/80 p-3 rounded-xl bg-slate-50/50 dark:bg-slate-800/20 shadow-inner">
-                    {batches.length === 0 ? (
-                      <p className="text-xs text-[var(--text-secondary)] italic col-span-full">No batches available.</p>
-                    ) : (
-                      batches.map((b) => {
-                        const isChecked = quizBatchIds.includes(String(b.id));
-                        return (
-                          <label key={b.id} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-100/50 dark:hover:bg-slate-800/50 cursor-pointer text-xs text-[var(--text-primary)] transition-all select-none">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {
-                                if (isChecked) {
-                                  setQuizBatchIds(quizBatchIds.filter((id: string) => id !== String(b.id)));
-                                } else {
-                                  setQuizBatchIds([...quizBatchIds, String(b.id)]);
-                                }
-                              }}
-                              className="rounded border-slate-350 dark:border-slate-700 text-[#6C1D5F] focus:ring-[#6C1D5F] w-4.5 h-4.5 cursor-pointer"
-                            />
-                            <span className="font-semibold text-slate-750 dark:text-slate-200">{b.batchName}</span>
-                          </label>
-                        );
-                      })
-                    )}
-                  </div>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 italic leading-snug">
-                    Leave all batches unchecked to save as draft. Select at least one batch to publish the quiz.
-                  </p>
-                </div>
-              </Card>
             </div>
 
-            {/* Sticky Bottom Action Bar */}
-            <div className="fixed bottom-0 left-0 right-0 lg:pl-64 bg-white dark:bg-[#1E293B]/95 border-t border-[var(--brand-border)] py-4 px-6 md:px-8 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40 flex items-center justify-between backdrop-blur-sm select-none">
-              <Button variant="ghost" onClick={handleCloseCreateModal} disabled={submittingQuiz}>Cancel</Button>
+            {/* Sticky Bottom Action Buttons Footer bar */}
+            <div className="fixed bottom-0 left-0 right-0 lg:pl-64 bg-white dark:bg-[#0B0F19]/95 border-t border-brand-border dark:border-slate-800 py-4 px-6 md:px-8 shadow-[0_-4px_12px_rgba(0,0,0,0.05)] z-40 flex items-center justify-between backdrop-blur-sm select-none">
+              <button
+                type="button"
+                onClick={handleCloseCreateModal}
+                disabled={submittingQuiz}
+                className="px-5 py-2 hover:bg-slate-100 dark:hover:bg-slate-850 rounded-full text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+
               <div className="flex gap-3">
-                <Button
+                <button
                   type="button"
-                  variant="outline"
-                  size="lg"
                   disabled={hasAnyValidationErrors() || submittingQuiz}
                   onClick={() => onSubmitQuiz('draft')}
+                  className="px-5 py-2 border border-brand-border dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-full text-xs font-bold text-slate-700 dark:text-slate-300 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Save Draft
-                </Button>
-                <Button
+                </button>
+                <button
                   type="button"
-                  variant="primary"
-                  size="lg"
                   disabled={questionsList.length === 0 || hasAnyValidationErrors() || submittingQuiz}
                   onClick={() => onSubmitQuiz('published')}
+                  className="px-6 py-2 bg-gradient-to-r from-[#4A1F4F] to-[#7A2676] hover:from-[#5A2460] hover:to-[#8B2F86] text-white rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md hover:scale-[1.01] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submittingQuiz ? 'Saving...' : (isEditMode ? 'Save Changes' : 'Publish Quiz')}
-                </Button>
+                </button>
               </div>
             </div>
+
           </form>
         </div>
       </Layout>
