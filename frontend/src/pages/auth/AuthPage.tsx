@@ -174,7 +174,7 @@ export const AuthPage: React.FC = () => {
   // Direct login for quick demo
   const handleStudentDirectLogin = async () => {
     try {
-      await performLoginRedirect('student@example.com', 'password123');
+      await performLoginRedirect('rohit@xebia.com', 'Rohit@123');
     } catch (err: any) {
       try {
         let batchId = 1;
@@ -182,11 +182,11 @@ export const AuthPage: React.FC = () => {
           batchId = batchList[0].id;
         }
         const regRes = await authService.studentRegister({
-          name: 'Student User',
-          email: 'student@example.com',
+          name: 'Rohit Vaishnav',
+          email: 'rohit@xebia.com',
           enrollmentNumber: 'ENR-DEMO-001',
           batchId: batchId,
-          password: 'password123'
+          password: 'Rohit@123'
         });
         localStorage.setItem('xebia-student-token', regRes.token);
         login(regRes.user, regRes.token);
@@ -200,13 +200,13 @@ export const AuthPage: React.FC = () => {
 
   const handleTeacherDirectLogin = async () => {
     try {
-      await performLoginRedirect('teacher@example.com', 'password123');
+      await performLoginRedirect('teacher@example.com', 'Password@123');
     } catch (err: any) {
       try {
         const regRes = await authService.teacherRegister({
           name: 'Teacher User',
           email: 'teacher@example.com',
-          password: 'password123',
+          password: 'Password@123',
           subject: 'General'
         });
         login(regRes.user, regRes.token);

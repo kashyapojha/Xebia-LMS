@@ -1,10 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { authService } from '@/services-lms/authService';
 import { useToast } from '@/hooks-lms/useToast';
+import { useAuth as useMainAuth } from '../contexts/AuthContext';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
+  const mainAuth = useMainAuth();
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -68,8 +70,9 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     
+    mainAuth.logout();
     showToast('Logged out successfully', 'info');
-  }, [showToast]);
+  }, [showToast, mainAuth]);
 
   const value = useMemo(() => ({
     user,

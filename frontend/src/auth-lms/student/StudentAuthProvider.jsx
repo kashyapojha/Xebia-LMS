@@ -1,10 +1,12 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { studentAuthService } from './studentAuthService';
 import { useToast } from '@/hooks-lms/useToast';
+import { useAuth as useMainAuth } from '../../contexts/AuthContext';
 
 export const StudentAuthContext = createContext(null);
 
 export function StudentAuthProvider({ children }) {
+  const mainAuth = useMainAuth();
   const [studentUser, setStudentUser] = useState(null);
   const [studentToken, setStudentToken] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -71,8 +73,9 @@ export function StudentAuthProvider({ children }) {
     setStudentToken(null);
     setStudentUser(null);
     
+    mainAuth.logout();
     showToast('Logged out successfully', 'info');
-  }, [showToast]);
+  }, [showToast, mainAuth]);
 
   const value = useMemo(() => ({
     user: studentUser,
