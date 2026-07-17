@@ -64,7 +64,7 @@ services:
     staticPublishPath: ./dist
     envVars:
       - key: VITE_API_URL
-        value: https://xebia-lms-backend.onrender.com/api
+        value: https://xebia-lms-backend-yrcs.onrender.com/api
     routes:
       - type: rewrite
         source: /*
