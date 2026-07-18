@@ -13,6 +13,13 @@ export function EventsProvider({ children }) {
   const refreshRegistrations = async () => {
     try {
       const isStudent = window.location.pathname.startsWith('/student');
+      const isAdmin = window.location.pathname.startsWith('/admin');
+      
+      if (!isStudent && !isAdmin) {
+        setRegistrations([]);
+        return;
+      }
+      
       const regUrl = isStudent ? '/events/registrations/my?size=1000' : '/events/registrations?size=1000';
       const regResponse = await api.get(regUrl);
       if (regResponse.data && regResponse.data.data && regResponse.data.data.content) {
@@ -30,6 +37,15 @@ export function EventsProvider({ children }) {
 
   // Fetch events and registrations from backend on mount
   const fetchData = async () => {
+    const isStudent = window.location.pathname.startsWith('/student');
+    const isTeacher = window.location.pathname.startsWith('/teacher');
+    const isAdmin = window.location.pathname.startsWith('/admin');
+
+    if (!isStudent && !isTeacher && !isAdmin) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);

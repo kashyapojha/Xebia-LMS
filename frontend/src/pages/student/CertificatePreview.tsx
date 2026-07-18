@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Layout } from '../../components/layout/Layout';
 import { Button } from '../../components/ui/Button';
@@ -6,6 +6,8 @@ import { Download } from 'lucide-react';
 import { certificateService } from '../../services/certificate.service';
 import type { Certificate } from '../../services/certificate.service';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 export const CertificatePreview: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +15,7 @@ export const CertificatePreview: React.FC = () => {
   const [cert, setCert] = useState<Certificate | null>(null);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
+  const certificateRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (id) {
@@ -29,17 +32,37 @@ export const CertificatePreview: React.FC = () => {
   }, [id, navigate]);
 
   const handleDownload = async () => {
-    if (!id || !cert) return;
+    if (!id || !cert || !certificateRef.current) return;
     setDownloading(true);
     const loadingToast = toast.loading('Generating and downloading your certificate...');
     try {
-      await certificateService.downloadOrGenerateCertificate(id, `certificate-${id}.pdf`);
-      toast.success('Certificate downloaded successfully!', { id: loadingToast });
+      const element = certificateRef.current;
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#faf5ed'
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
       
-      const updated = await certificateService.getCertificatePreview(id);
-      setCert(updated);
+      const activityName = cert.quizTitle || cert.assignmentTitle || cert.assignmentName || 'Course';
+      pdf.save(`certificate-${activityName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+
+      toast.success('Certificate downloaded successfully!', { id: loadingToast });
     } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to generate and download certificate', { id: loadingToast });
+      console.error(err);
+      toast.error('Failed to generate and download certificate', { id: loadingToast });
     } finally {
       setDownloading(false);
     }
@@ -76,7 +99,7 @@ export const CertificatePreview: React.FC = () => {
         </div>
 
         {/* --- CLASSIC BEIGE & BROWN CERTIFICATE CANVAS --- */}
-        <div className="relative bg-[#fcf9f5] rounded-lg border border-neutral-200 shadow-2xl flex-1 flex flex-col justify-center overflow-hidden p-1">
+        <div ref={certificateRef} className="relative bg-[#fcf9f5] rounded-lg border border-neutral-200 shadow-2xl flex-1 flex flex-col justify-center overflow-hidden p-1">
           
           {/* Top-Left Diagonal Corner Shapes */}
           <div className="absolute top-0 left-0 w-44 h-44 overflow-hidden pointer-events-none">
