@@ -10,6 +10,8 @@ import { certificateService } from '../../services/certificate.service';
 import type { Certificate } from '../../services/certificate.service';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 interface StudentProgressRow {
   studentId: string;
@@ -44,6 +46,46 @@ export const TeacherCertificates: React.FC = () => {
   const [subjectsList, setSubjectsList] = useState<string[]>([]);
   const [selectedCert, setSelectedCert] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const [certToDownload, setCertToDownload] = useState<any | null>(null);
+  const downloadRef = React.useRef<HTMLDivElement>(null);
+
+  const downloadCertificatePDF = async (cert: any) => {
+    setCertToDownload(cert);
+    setTimeout(async () => {
+      if (!downloadRef.current) return;
+      const loadingToast = toast.loading(`Generating certificate for ${cert.studentName}...`);
+      try {
+        const element = downloadRef.current;
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: '#faf5ed'
+        });
+
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+          orientation: 'landscape',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`certificate-${cert.studentName.replace(/[^a-zA-Z0-9]/g, '_')}-${cert.subjectName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+
+        toast.success('Certificate downloaded successfully!', { id: loadingToast });
+      } catch (err) {
+        console.error(err);
+        toast.error('Failed to generate PDF', { id: loadingToast });
+      } finally {
+        setCertToDownload(null);
+      }
+    }, 100);
+  };
 
   // Configuration Form State
   const [isConfigOpen, setIsConfigOpen] = useState(false);
@@ -60,12 +102,14 @@ export const TeacherCertificates: React.FC = () => {
     try {
       // 1. Fetch batches
       const batchesRes = await api.get('/teacher/batches');
-      const fetchedBatches = batchesRes.data.data || [];
+      const batchesData = batchesRes.data.data;
+      const fetchedBatches = Array.isArray(batchesData) ? batchesData : (batchesData?.content || []);
       setBatches(fetchedBatches);
 
       // 2. Fetch assignments & quizzes
       const assignmentsRes = await api.get('/teacher/assignments', { params: { page: '0', size: '1000' } });
-      const allAssignments = assignmentsRes.data.data || [];
+      const assignmentsData = assignmentsRes.data.data;
+      const allAssignments = Array.isArray(assignmentsData) ? assignmentsData : (assignmentsData?.content || []);
       const publishedTasks = allAssignments.filter((a: any) => a.status !== 'DRAFT');
 
       // Populate distinct subjects
@@ -603,11 +647,11 @@ export const TeacherCertificates: React.FC = () => {
                                 <Eye size={15} />
                               </button>
                               <button
-                                onClick={() => window.open(r.pdfUrl, '_blank')}
-                                title="View PDF"
+                                onClick={() => downloadCertificatePDF(r)}
+                                title="Download PDF"
                                 className="p-1.5 rounded-lg text-[var(--text-secondary)] hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-500/10 transition-colors cursor-pointer"
                               >
-                                <ExternalLink size={15} />
+                                <Download size={15} />
                               </button>
                             </>
                           ) : (
@@ -732,8 +776,8 @@ export const TeacherCertificates: React.FC = () => {
                 <span>Verify Authenticity</span>
               </Button>
             )}
-            {selectedCert && selectedCert.pdfUrl && (
-              <Button variant="primary" onClick={() => window.open(selectedCert.pdfUrl, '_blank')}>
+            {selectedCert && selectedCert.certificateId && (
+              <Button variant="primary" onClick={() => downloadCertificatePDF(selectedCert)}>
                 <Download size={14} />
                 <span>Download PDF</span>
               </Button>
@@ -790,6 +834,76 @@ export const TeacherCertificates: React.FC = () => {
           </div>
         )}
       </Modal>
+
+      {/* Hidden Certificate element for client-side PDF generation */}
+      {certToDownload && (
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '800px', height: '565px' }}>
+          <div ref={downloadRef} className="bg-[#fcf9f5] text-slate-800 rounded-lg border border-neutral-200 p-8 flex flex-col justify-between overflow-hidden" style={{ width: '800px', height: '565px', boxSizing: 'border-box' }}>
+            <div className="border-[8px] border-[#4A1F4F] rounded-2xl p-4 flex flex-col justify-between" style={{ height: '100%', boxSizing: 'border-box', position: 'relative' }}>
+              
+              {/* Inner accent line */}
+              <div className="absolute inset-1.5 border border-slate-200 pointer-events-none rounded-lg" />
+              
+              {/* Header Logos */}
+              <div className="flex justify-between items-center z-10">
+                <span className="font-bold text-slate-800 text-xs">LMS Portal</span>
+                <span className="font-bold text-slate-800 text-xs">Xebia</span>
+              </div>
+
+              {/* Body Content */}
+              <div className="text-center my-auto flex flex-col justify-center items-center space-y-4">
+                <h1 className="font-serif text-3xl font-light tracking-[0.2em] text-[#2c221e] uppercase ml-[0.2em]">
+                  Certificate
+                </h1>
+                <p className="font-serif italic text-[10px] text-[#7c6a5f] tracking-wide">
+                  This document proudly certifies that the curriculum assessment was successfully completed by
+                </p>
+                <h2 className="font-serif text-xl font-bold text-[#4a362d] tracking-wide">
+                  {certToDownload.studentName}
+                </h2>
+                <div className="w-3/5 h-[1px] bg-[#61473b]/40 mx-auto" />
+                <p className="text-[9px] text-[#7c6a5f] max-w-md leading-relaxed tracking-wide font-sans">
+                  for demonstrating exceptional core competencies, completing requirements, and successfully achieving passing evaluation benchmarks in the dynamic master track suite titled:
+                  <span className="block font-serif font-bold text-xs text-[#2c221e] mt-1 italic">
+                    "{certToDownload.subjectName} Course"
+                  </span>
+                </p>
+              </div>
+
+              {/* Footer Stamp / Seal / Signature */}
+              <div className="flex justify-between items-center mt-auto pt-2 border-t border-slate-100 z-10 text-[9px]">
+                <div className="flex items-center gap-2">
+                  {certToDownload.qrCodeUrl ? (
+                    <img src={certToDownload.qrCodeUrl} alt="QR" className="w-10 h-10 object-contain rounded border border-slate-100 bg-white p-0.5" />
+                  ) : (
+                    <div className="w-10 h-10 rounded border border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center p-0.5 text-[5px] text-slate-400 text-center leading-none">
+                      <span>Automatic</span>
+                      <span>Verified QR</span>
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[6px] uppercase font-bold text-slate-400">Certificate ID</span>
+                    <span className="font-mono font-bold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded">
+                      {certToDownload.certificateId || "CERT-PENDING"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-center w-28 text-center">
+                  <div className="w-full border-b border-[#61473b] pb-0.5 min-h-[12px]">
+                    <span className="font-serif italic text-[10px] text-indigo-900">
+                      {certToDownload.teacherName || "Authorized Instructor"}
+                    </span>
+                  </div>
+                  <span className="text-[8px] font-bold text-slate-600 block mt-0.5">{certToDownload.teacherName || "Authorized Instructor"}</span>
+                  <span className="text-[6px] text-slate-400 block">LMS Evaluator Signature</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };

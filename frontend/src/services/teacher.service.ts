@@ -4,7 +4,8 @@ import type { CreateAssignmentData, GradeSubmissionData, Assignment, Submission 
 const getOrCreateDefaultBatchId = async () => {
   try {
     const res = await api.get('/teacher/batches');
-    const batches = res.data.data || [];
+    const data = res.data.data;
+    const batches = Array.isArray(data) ? data : (data?.content || []);
     if (batches.length > 0) {
       return batches[0].id;
     }
@@ -63,7 +64,8 @@ const getDashboardStats = async () => {
 
   try {
     const assignmentsRes = await api.get('/teacher/assignments', { params: { page: '0', size: '100' } });
-    const assignments = assignmentsRes.data.data || [];
+    const data = assignmentsRes.data.data;
+    const assignments = Array.isArray(data) ? data : (data?.content || []);
     
     const submissionPromises = assignments.map(async (assignment: any) => {
       try {
